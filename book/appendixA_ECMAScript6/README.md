@@ -217,7 +217,7 @@ I'm doing something
 
 > let 변수 선언
 
-<pre>
+```
   let customer = 'Joe';
 
   (function() {
@@ -230,7 +230,7 @@ I'm doing something
 
   })();
 
-  for(let i=0; i<5; i++){
+  for(let i=0; i<5; i++) {
     console.log('i=' + i);
   }
 
@@ -244,7 +244,7 @@ i=1
 i=2
 i=3
 i=4
-</pre>
+```
 
 => const도 let과 접근 범위가 같지만, 상수로 선언되는 차이 존재.
 
@@ -334,6 +334,262 @@ The price quote for IBM is 0.10210848654823068
 </pre>
 
 
+---
+
+
+### A.5.1 나머지 연산자(Rest Opterator), 전개 연산자(Spread Opterator)
+
+- 기존  
+가변 인자를 사용하기 위해 arguments 객체를 사용(배열과 비슷 BUT 배열은 아님)  
+- 변경 (...) 으로 사용   
+=> 나머지 연산자는 전달 인자의 개수가 고정되지 않은 함수 & 마지막에 전달  
+```function processCustomers (... customers) { ... } ```
+
+> 나머지 연산자 예제  
+
+```
+// ES5 and arguments object
+  function calcTaxES5(){
+      console.log("ES5. Calculating tax for customers with the income ",
+                             arguments[0]);   // income is the first element
+      // extract an array starting from 2nd element
+      var customers = [].slice.call(arguments, 1);
+      customers.forEach(function (customer) {
+          console.log("Processing ", customer);
+      });
+  }
+  calcTaxES5(50000, "Smith", "Johnson", "McDonald");
+  calcTaxES5(750000, "Olson", "Clinton");
+// rest operator
+  function calcTaxES6(income, ...customers) {
+      console.log("ES6. Calculating tax for customers with the income ", income);
+      customers.forEach(function (customer) {
+          console.log("Processing ", customer);
+      });
+  }
+  calcTaxES6(50000, "Smith", "Johnson", "McDonald");
+  calcTaxES6(750000, "Olson", "Clinton");
+
+  ------------------------- console --------------------------------
+  ES5. Calculating tax for customers with the income  50000
+  Processing  Smith
+  Processing  Johnson
+  Processing  McDonald
+  ES5. Calculating tax for customers with the income  750000
+  Processing  Olson
+  Processing  Clinton
+  ES6. Calculating tax for customers with the income  50000
+  Processing  Smith
+  Processing  Johnson
+  Processing  McDonald
+  ES6. Calculating tax for customers with the income  750000
+  Processing  Olson
+  Processing  Clinton  
+  ------------------------------------------------------------------
+```
+
+> 전개 연산자
+
+```
+function calcTaxSpread(customer1, customer2, customer3, income) {
+  console.log('ES6. Calculating tax for customers with the income ', income);
+  console.log('Processing ', customer1, customer2, customer3, income);
+}
+
+var customers = ['Smith', 'Johnson', 'McDonald'];
+calcTaxSpread(...customers, 50000); //전개 연산자
+
+--- console ---
+ES6. Calculating tax for customers with the income  50000
+Processing  Smith Johnson McDonald 50000
+---------------
+```
+
+=> 나머지 연산자 == 가변 인자를 하나의 배열로 (위치는 항상 마지막)
+=> 전개 연산자 == 배열의 각 항목을 개별 변수로 분리 (위치는 상관 X)
+
+
+#### A.5.2 제너레이터(Generators)
+; 일반적으로 JavaScript 함수는 한 번 실행되면 중간에 멈추지X  
+=> 제너레이터 함수는 몇 번이고 멈출 수 있고, 멈춘 시점을 다시 이어 실행 할 수 있음  
++ 다른 제너레이터 함수에게 조작 권한을 넘길 수 있음
+
+> 제너레이터 eg
+
+```
+function* doSomething() {
+  console.log('Started processing');
+  yield; // 함수 실행이 멈추고 제너레이터 객체 외부에서
+         // 제너레이터의 next() 함수를 호출하면 멈췄던 함수가 실행
+  console.log('Resumed processing');
+}
+var iterator = doSomething();
+iterator.next(); // doSomething()시작 -> yield만나기 전까지
+console.log('after next()');
+iterator.next(); // doSomething() 재시작
+--- console ---
+Started processing
+after next()
+Resumed processing
+---------------
+```
+
+> 제너레이터 함수 예제
+
+```
+function* getStockPrice(symbol) {
+  while(true) {
+    yield Math.random() * 100;
+    console.log(`resuming for ${symbol}`);
+  }
+}
+
+// 1. 제너레이터 객체 생성 & 인자로 'IBM' 전달 BUT 함수 실행X
+let generator = getStockPrice('IBM');
+
+// 2. 기준 가격을 15달러, 초기 주가는 100달러로 설정
+const limitPrice = 15;
+let price = 100;
+
+// 3. 기준 가격인 15달러가 될 때까지 요청을 반복
+while(price > limitPrice) {
+  // 4. 주가를 다시 요청하고 현재 주가를 콘솔에 출력
+  price = generator.next().value;
+  console.log(`The generator returned ${price}`);
+}
+
+//5.
+console.log(`buying at ${price} !!!`);
+
+--- console ---
+The generator returned 78.95468262219512
+resuming for IBM
+The generator returned 56.325541781142576
+resuming for IBM
+The generator returned 6.752643829726246
+buying at 6.752643829726246 !!!
+----------------------------------------
+```
+
+#### A.5.3 비구조화(Destructuring)
+; 객체를 분해하는 것을 뜻(<=> 객체의 인스턴스를 만드는 것 == 메모리에 생성)
+
+
+```
+function getStock() {
+  return {
+    symbol : 'IBM',
+    price : 100.00
+  };
+}
+/*
+// ES5
+var stock = getStock();
+var symbol = stock.symbol;
+var price = stock.price;
+*/
+
+let {symbol, price} = getStock();
+console.log(`The price of ${symbol} is ${price}`);
+
+------ console ---------
+The price of IBM is 100
+-------------------------
+
+--------------------------------------------------------
+
+let {sym, price} = getStock();
+console.log(`The price of ${sym} is ${price}`);
+=> The price of undefined is 100
+
+--------------------------------------------------------
+
+let {symbol : sym, price} = getStock();
+console.log(`The price of ${sym} is ${price}`);
+=> The price of IBM is 100
+
+--------------------------------------------------------
+
+let {symbol : sym, price, stockExchange} = getStock();
+console.log(`The price of ${sym} is ${price} ${stockExchange}`);
+=> The price of IBM is 100 undefined
+
+--------------------------------------------------------
+
+let {symbol : sym, price, stockExchange = "NASDAQ"} = getStock();
+console.log(`The price of ${sym} is ${price} ${stockExchange}`);
+=> The price of IBM is 100 NASDAQ
+
+--------------------------------------------------------
+
+```
+
+> 중첩된 객체에 비구조화 할당 사용하기
+
+```
+let msft = {
+  symbol : 'MSFT',
+  lastPrice : 50.00,
+  exchange : {
+    name : 'NASDAQ',
+    trandingHours : '9:30am-4pm'
+  }
+};
+
+function printStockInfo(stock) {
+  let {symbol, exchange : {name} } = stock;
+  console.log(`The ${symbol} stock is traded at ${name}`);
+}
+
+printStockInfo(msft);
+
+--- console ---
+The MSFT stock is traded at NASDAQ
+---------------
+```
+
+**배열분해**  
+
+```
+let [name1, name2] = ['Smith', 'Cliton'];
+console.log(`name1 = ${name1} , name2 = ${name2}`);
+=> name1 = Smith , name2 = Cliton
+
+// 두 번째 항목만 추출
+let [, name2] = ['Smith', 'Cliton'];
+console.log(`name1 = ${name1} , name2 = ${name2}`);
+
+// 배열 분해
+function getCustomers () {
+  return ['Smith', 'Zac', 'Coding', 'Gonzales'];
+}
+
+let [firstCustomer, , , lastCustomer] = getCustomers();
+console.log(`The first customer : ${firstCustomer} and the last one is ${lastCustomer}`);
+=> The first customer : Smith and the last one is Gonzales
+
+// 배열 분해 + 나머지 연산자
+let customers = ['Smith', 'Clinton', 'Lou', 'Gonzales'];
+let [firstCust, secondCust, ... otherCust] = customers;
+
+console.log(`first : ${firstCust} , second : ${secondCust}`);
+console.log(`Others : ${otherCust}`);
+
+// 함수를 선언할 때 적용
+function processFirstTwoCustomers([firstCust, secondCust, ... otherCust]) {
+  console.log(`first : ${firstCust} , second : ${secondCust}`);
+  console.log(`Others : ${otherCust}`);
+}
+processFirstTwoCustomers(customers);
+
+
+--- Console --------------------
+first : Smith , second : Clinton
+Others : Lou,Gonzales
+first : Smith , second : Clinton
+Others : Lou,Gonzales
+-------------------------------
+```
 
 
 
@@ -350,32 +606,7 @@ The price quote for IBM is 0.10210848654823068
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+ㅁㅇㄴㄻㄴㅇㄻ
 
 
 ---
