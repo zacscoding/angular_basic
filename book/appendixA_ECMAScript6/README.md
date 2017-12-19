@@ -18,6 +18,8 @@
 - <a href="#A3">A.3 옵션 인자와 인자 기본값</a>
 - <a href="#A4">A.4 변수 스코프</a>
 - <a href="#A5">A.5 화살표 함수 표현식과 this</a>
+- <a href="#A6">A.6 forEach(), for-in, for-of</a>
+- <a href="#A7">A.7 클래스와 상속</a>
 
 
 
@@ -590,6 +592,208 @@ first : Smith , second : Clinton
 Others : Lou,Gonzales
 -------------------------------
 ```
+
+---
+
+<div id="A6"></div>
+
+### A.6 forEach(), for-in, for-of
+
+#### A.6.1 forEach()
+
+```
+var numbersArray = [1,2,3,4];
+numbersArray.description = 'four numbers';
+
+numbersArray.forEach((n) => console.log(n));
+----------------- console -------------------
+1
+2
+3
+4
+---------------------------------------------
+```
+
+#### A.6.2 for-in  
+
+```
+var numbersArray = [1,2,3,4];
+numbersArray.description = 'four numbers';
+
+// 프로퍼티의 이름과 값으로 처리
+// 컬렉션 데이터 + 프로퍼티 모두 순회
+for(let n in numbersArray) {
+  console.log(n);// 문자열로 출력  
+}
+for(let n in numbersArray) {
+  console.log(numbersArray[n]);
+}
+--- console ---
+0
+1
+2
+3
+description
+1
+2
+3
+4
+four numbers
+---------------
+```
+
+#### A.6.3 for-of
+;컬렉션의 값을 기준으로 순회 && 데이터 컬렉션에 속하지 않은 프로퍼티는 무시  
+
+```
+var numbersArray = [10,20,30,40];
+numbersArray.description = 'four numbers';
+
+console.log('Running for of for the entire array');
+for(let n of numbersArray) {
+  console.log(n);
+}
+
+console.log('Running for of with a break');
+for(let n of numbersArray) {
+  if(n>20) break;
+  console.log(n);
+}
+
+--- console ---
+Running for of for the entire array
+10
+20
+30
+40
+Running for of with a break
+10
+20
+---------------
+```
+
+=> for-of 루프는 Array, Map, Set과 같이 반복 가능한(iterable) 객체에는 모두 사용 가능  
+
+```
+// 문자열 순회에 사용
+for(let char of "John") {
+  console.log(char);
+}
+```
+
+---
+
+<div id="A7"></div>
+
+### A.7 클래스 상속
+; ES6에 클래스 문법이 정식으로 도입
+
+> Tax객체를 상속받아 NJTax 객체를 구현하는 예제
+
+```
+function Tax() {
+  // Tax 객체에서 사용하는 코드  
+}
+
+function NJTax() {
+  // New Jersey Tax 객체에서 사용하는 코드
+}
+
+// NJTax가 Tax를 상속받도록 prototype으로 연결
+NJTax.prototype = new Tax();
+
+var njTax = new NJTax();
+```
+
+> extends 키워드 도입
+
+```
+// 부모, 슈퍼 클래스
+class Tax {
+    // Tax 객체에서 사용하는 코드
+}
+// 자식, 서브 클래스
+class NJTax extends Tax {
+    // New Jersey Tax 객체에서 사용하는 코드
+}
+
+var njTax = new NJTax();
+// is-a 관계 :: NJTax is a Tax
+```
+
+```Class 선언은 호이스팅이 되지 않으므로, 스크립트의 제일 위에 선언 해야 함```
+
+> 기존 클래스 메소드 정의
+
+```
+function Tax() {
+  // Tax 객체에서 사용하는 코드
+}
+Tax.prototype = {
+  calcTax : function() {
+    // 세금을 계산하는 코드
+  }
+}
+
+==> ES6로 개선 된 코드
+
+class Tax() {
+  calcTax() {
+    // 세금을 계산하는 코드
+  }
+}
+```
+
+```ES6에서 멤버필드는 지원하지 X (TypeScript는 지원)```
+
+#### A.7.1 생성자
+
+> constructors() 메소드로 정의
+
+```
+class Tax {
+  constructor(income) {
+    // this == 객체 자체
+    this.income = income;
+  }
+}
+
+var myTax = new Tax(5000);
+console.log(myTax);
+```
+
+> E.g : NJTax 클래스를 만들면ㅅ더 생성자에 50,000을 인자로 전달
+
+```
+class Tax {
+  constructor(income) {
+    console.log('Tax.constructor(income)',income);
+    this.income = income;
+  }
+}
+
+class NJTax extends Tax {
+  // New Jersey Tax 객체에서 사용하는 코드
+}
+
+var njTax = new NJTax(50000);
+console.log(`The income in njTax insteance is ${njTax.income}`);
+
+--- console ---
+Tax.constructor(income) 50000
+The income in njTax insteance is 50000
+---------------
+```
+
+#### A.7.2 정적 변수(static variables)
+
+
+
+
+
+
+
+
 
 
 
