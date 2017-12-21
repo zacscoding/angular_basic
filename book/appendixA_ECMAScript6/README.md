@@ -20,9 +20,8 @@
 - <a href="#A5">A.5 화살표 함수 표현식과 this</a>
 - <a href="#A6">A.6 forEach(), for-in, for-of</a>
 - <a href="#A7">A.7 클래스와 상속</a>
-
-
-
+- <a href="#A8">A.8 프로미스로 비동기 작업 처리하기</a>
+- <a href="#A9">A.9 모듈</a>
 
 <div id="A2"></div>
 
@@ -787,6 +786,290 @@ The income in njTax insteance is 50000
 
 #### A.7.2 정적 변수(static variables)
 
+> 정적 변수 기본 eg  
+(정적 변수는 new와 연결X => 클래스를 통해 접근)
+
+```
+class A {}
+A.counter = 0;
+
+var a1 = new A();
+A.counter++;
+console.log(A.counter);
+
+var a2 = new A();
+A.counter++;
+console.log(A.counter);
+
+--- console ---
+1
+2
+---------------
+```
+
+### A.7.3 Getter, Setter , 메소드 정의
+
+```
+// Tax 객체 리터럴 선언
+var Tax = {
+  taxableIncome : 0,
+  get income(){ return this.taxableIncome; }
+  set income(value) {this.taxableIncome = value;},
+  // function 키워드 없이 사용
+  calculateTax() { return this.taxableIncome * 0.13;}
+
+}
+
+Tax.income = 50000;
+console.log('Income : ' + Tax.income);
+console.log(`For the income ${Tax.income} your tax is ${Tax.calculateTax()}`);
+
+--- console ---
+Income : 50000
+For the income 50000 your tax is 6500
+--------------
+```
+
+### A.7.4 super 키워드와 super() 함수
+
+```
+class Tax {
+  constructor (income) {
+    this.income = income;
+  }
+
+  calculateFederalTax() {
+    console.log(`Calculating federal tax for income ${this.income}`);
+  }
+
+  calcMinTax() {
+    console.log('In Tax. Calculating min tax');
+    return 123;
+  }
+}
+
+class NJTax extends Tax {
+  constructor(income, stateTaxPercent) {
+    super(income);
+    this.stateTaxPercent = stateTaxPercent;
+  }
+
+  calculateStateTax() {
+    console.log(`Calculating state tax for income ${this.income}`);
+  }
+
+  calcMinTax() {
+    super.calcMintax();
+    console.log('In NJTax. Adjusting min tax');
+  }  
+}
+
+var theTax = new NJTax(50000,6);
+
+theTax.calculateFederalTax();
+theTax.calculateStateTax();
+
+theTax.calcMinTax();
+
+
+--- console ---
+Calculating federal tax for income 50000
+Calculating state tax for income 50000
+In Tax. Calculating min tax
+In NJTax. Adjusting min tax
+------------------------------------
+```
+
+<div id="A8"> </div>
+
+### A.8 프로미스로 비동기 작업 처리하기
+
+=> ES5까지 비동기 작업을 처리 할 때, 보통 콜백을 사용
+
+#### A.8.1 콜백 지옥(callback hell)
+
+> 중첩된 콜백 함수 :: 고객이 주문 한 상품의 상세 정보를 서버에서 받아오는 로직  
+
+- 서버 -> 사용자 정보
+- 서버 -> 주문 정보(사용자 정보를 가지고)
+- 서버 -> 상품 목록(주문 정보를 가지고)
+- 서버 -> 상품의 상세 정보(상품 목록을 가지고)
+
+```
+function getProductDetails() {
+  setTimeout(function() {
+    console.log('Getting customers');
+    setTimeout(function() {
+      console.log('Getting orders');
+      setTimeout(function() {
+        console.log('Getting products');
+        setTimeout(function(){
+          console.log('Getting product details');
+        },1000);                
+      }, 1000);
+    }, 1000);    
+  }, 1000);
+}
+
+--- console ---
+Getting customers
+Getting orders
+Getting products
+Getting product details
+----------------
+
+=> 콜백 지옥(callback hell) || 공포의 삼각형(triangle of doom)
+```
+
+#### A.8.2 프로미스(Promises)
+
+=> Promise 객체는 비동기 작업이 끝나기를 기다렸다가 작업의 결과에 따라  
+다음 작업을 진행할지, 에러를 처리할 지 결정함  
+
+- Fulfilled : 작업이 성공 한 경우
+- Rejected : 작업이 실패한 경우, 에러를 반환
+- Pending : 작업이 아직 진행 중인 경우
+
+> 프로미스로 구현한 getCustomers()
+
+```
+function getCustomers() {
+  return new Promise (
+    function(resolve, reject) {
+      console.log('Getting customers');
+
+      // 서버 응답을 setTimeout() 함수로 대체
+      setTimeout(function() {
+        var success = true;
+        if(success) {
+          resolve('John Smith'); // fulfilled 상태의 Promise 객체 반환
+        }
+        else {
+          reject("Can't get customers"); // rejected 상태의 Promise 객체 반환
+        }        
+      }, 1000);      
+    }    
+  );
+}
+
+// then과 catch는 둘 중 하나 실행
+let promise = getCustomers()
+  .then((cust) => console.log(cust)) // cust는 위의 'Jone Smith'를 crust 인자로
+  .catch((err) => console.log(err)); // "Cant't get customers"를 err 인자로
+console.log('Invoked getCustomers. Wating for results');
+
+--- console ---
+Getting customers
+sandbox.js:68 Invoked getCustomers. Wating for results
+sandbox.js:68 John Smith
+----------------
+```
+
+> 프로미스 체이닝
+
+```
+function getCustomers() {
+  let promise = new Promise (
+    function(resolve, reject) {
+      console.log('Getting customers');
+
+      // 서버 응답을 setTimeout() 함수로 대체
+      setTimeout(function() {
+        var success = true;
+        if(success) {
+          resolve('John Smith'); // fulfilled 상태의 Promise 객체 반환
+        }
+        else {
+          reject("Can't get customers"); // rejected 상태의 Promise 객체 반환
+        }        
+      }, 1000);      
+    }    
+  );
+
+  return promise;
+}
+
+function getOrders (customer) {
+  let promise = new Promise (
+    function (resolve, reject) {
+      // 서버 응답을 setTime() 함수로 대신
+      setTimeout( function() {
+        let success = true;
+        if(success) {
+          resolve(`Found the order 123 for ${customer}`);
+        }
+        else {
+          reject("Can't get orders");
+        }        
+      }, 1000);
+    }
+  );
+
+  return promise;
+}
+
+getCustomers()
+  .then((cust) => {
+    console.log(cust);
+    return cust;
+  })
+  .then((cust) => getOrders(cust))
+  .then((order) => console.log(order))
+  .catch((err) => console.error(err));
+
+console.log('Chained getCustomers and getOrders. Waiting for results');
+
+--- console success : true---
+Getting customers
+Chained getCustomers and getOrders. Waiting for results
+ohn Smith
+Found the order 123 for John Smith
+------------------
+--- console success : false ---
+Getting customers
+Chained getCustomers and getOrders. Waiting for results
+Can't get customers
+-------------------------------
+```
+
+> 콘솔 로그를 뺀 체이닝
+
+```
+getCustomers()
+  .then((cust) => getOrders(cust))  
+  .catch((err) => console.error(err));
+```
+
+=> 함수에서 에러 발생 or rejected 상태의 Promise 객체가 반환되면  
+catch() 함수를 만날 때까지 중간에 있는 then() 함수는 모두 건너띔  
+
+
+#### A.8.3 프로미스 병렬 처리
+; 비동기 함수가 여러 개 있고, 각각의 함수가 서로 관련이 없는 경우  
+정해진 순서로 실행할 필요가 없으며, 모든 함수가 실행된 뒤에 어떤 동작을 하기만 하면 됨  
+=> Promise 객체에서 제공하는 all() 메소드 사용
+
+> Promise.all() 병렬 처리
+
+```
+Promise.all( [getCustomers(), getOrders()] )
+  .then((order) => console.log(order))
+  .catch((err) => console.log(err));
+
+--- console ---
+Getting customers
+["John Smith", "Found the order 123 for undefined"]
+---------------
+```
+
+=> 위의 상황에는 서로 연관관계가 있으므로 적합X
+=> 웹 포탈에서 날씨, 주식, 교통 정보를 모두 받은 시점에 화면을 그린다면  
+Promise.all() 함수를 사용하는게 좋음
+
+---
+
+<div id="A9"></div>
+### A.9 모듈
 
 
 
@@ -801,6 +1084,21 @@ The income in njTax insteance is 50000
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+<br />
+<br /><br /><br />
+ddddddddddddddd
 
 
 
