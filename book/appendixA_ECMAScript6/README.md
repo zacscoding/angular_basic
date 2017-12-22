@@ -1069,46 +1069,161 @@ Promise.all() 함수를 사용하는게 좋음
 ---
 
 <div id="A9"></div>
+
 ### A.9 모듈
+; 프로그래밍 언어와 상관없이, 코드를 모듈 단위로 나누면 애플리케이션을  
+기능 단위로 구분해서 효율적으로 구성할 수 있고, 모듈을 재사용할 때도 유리
+
+#### A.9.1 import 와 export
+
+- import :
+- export :
+
+> tax.js
+
+```
+export var taxCode;
+
+export function calcTaxes () {
+  // 기능 구현
+}
+
+function doSomething() { // 함수 공개 X
+  // 기능 구현
+}
+```
+
+> use tax.js
+
+```
+import { taxCode, calcTaxes } from 'tax'; // 확장자 생략
+
+if( taxCode === 1 ) {
+  // do something
+}
+
+calcTaxes();
+```
+
+> my_module.js
+
+```
+export default function() {
+  // do something
+} // 함수 선언이기 때문에 세미콜로 X
+
+export var taxCode;
+```
+
+> main.js
+
+```
+// default 키워드로 지정 되어 새로운 이름 변경 아닌 건 {}
+import aVeryCoolFunction, {taxCode} from 'my_module'
+// 이미 이름이 지정 된 경우, 새로운 이름을 사용할 땐 as
+import coolFunction, {taxCode as taxCode2016} from 'my_module';
+
+aVeryCoolFunction();
+```
+
+=> import 키워드를 사용해도 export로 공개된 항목이 복사되는 X(참조)  
+=> 모듈을 사용하는 쪽에서 수정 X & 모듈에서 변경되면, 사용하는 쪽에도  
+새로운 값이 바로 적용
 
 
+#### A.9.2 모듈 동적 로딩
+; System이라는 모듈 동적 로더가 있었지만, 최종안에서 빠짐  
+=> 시기상의 문제 일뿐, 네이티브로 구현될 것
 
+> 초기에 논의되던 대로 프로미스 기반 모듈 동적 로딩
 
+```
+System.import('someModule')
+  .then( function(module) {
+    module.doSomething();
+  })
+  .catch( function(error) {
+    // 에러 처리
+  });
+```
 
+**간단한  쇼핑몰 애플리케이션**  
+배송모듈 + 결제모듈 => 기능이 필요할 때 모듈을 불러오기  
 
+> package.json
 
+```
+{
+	"name" : "module",
+	"scripts" : {
+		"start" : "http-server"
+	},
+	"dependencies" : {
+		"es6-module-loader" : "^0.17.11",
+		"http-server" : "^0.10.0",
+		"traceur" : "^0.0.111"
+	}
+}
+```
 
+> shipping.js
 
+```
+import {processPayment} from 'billing.js';
 
+export function ship() {
+	processPayment();
+	console.log('Shipping products...');
+}
 
+function calculateShippingCost() {
+	console.log('Calculating shipping cost');
+}
+```
 
+> billing.js
 
+```
+function validateBillingInfo() {
+	console.log('Validating billing info...');
+}
 
+export function processPayment() {
+	console.log('processing payment...');
+}
+```
 
+> moduleLoader.html
 
+```
+<!DOCTYPE html>
+<html>
+	<head>
+    <!-- ES6 Module Loader 실행에 필요한 traceur를 로드 -->    
+		<script src="node_modules/traceur/bin/traceur.js"></script>
+    <!-- 불러오는 파일 이름 주의-->
+		<script src="node_modules/es6-module-loader/dist/es6-module-loader-dev.js"></script>
+	</head>
+	<body>
+		<button id="shippingBtn">Load the Shipping Module</button>
 
+		<script>
+			const btn = document.querySelector('#shippingBtn');
+			btn.addEventListener('click', () => {
+				System.import('shipping.js') // shipping.js를 동적 로딩 + 확장자까지
+					.then(function (module) {
+						console.log('Shipping module Loaded.', module);
+						module.ship();
+						module.calculateShippingCost(); // export가 아니므로 에러
+					})
+					.catch(function (err) {
+						console.log('In error handler', err);
+					});
+			});
+		</script>
+	</body>
+</html>
+```
 
-
-
-
-
-
-
-
-
-<br />
-<br /><br /><br />
-ddddddddddddddd
-
-
-
-
-
-
-
-
-
-ㅁㅇㄴㄻㄴㅇㄻ
-
-
----
+=> System.import() 함수는 Promise 객체를 반환   
+( 모듈 로드에 성공하면 then()함수 실행 || 에러가 발생하면 catch() 함수 실행 )

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<!-- ES6 Module Loader 실행에 필요한 traceur를 로드-->
+		 <script src="https://google.github.io/traceur-compiler/bin/traceur.js"></script>
+		<!-- 
+		<script src="es6-module-loader.js"></script>
+		-->
+		<script src="node_modules/es6-module-loader/dist/es6-module-loader-dev.js"></script>
+	</head>
+	<body>
+		<button id="shippingBtn">Load the Shipping Module</button>
+		
+		<script>
+			const btn = document.querySelector('#shippingBtn');
+			
+			btn.addEventListener( 'click', () => {
+				System.import('shipping')
+					.then(function(module){
+						console.log('Shipping module Loaded.', module);
+						module.ship();
+						module.calculateShippingCose();
+					})
+					.catch(function(err){
+						console.log('In error handle', err);
+					});
+			});
+		</script>
+	
+	</body>
+</html>
