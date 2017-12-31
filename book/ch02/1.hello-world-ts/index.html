@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<!-- 클래스 데코레이터를 사용하기 위해 폴리필을 로드 -->
 		<script src="https://unpkg.com/core-js@2.4.1/client/shim.min.js"></script>
 		<!-- Angular의 변화 감지 매커니즘은 Zone.js를 이용 -->
@@ -13,7 +14,7 @@
 		<script>
 			System.config({ // SystemJS 모듈 로더가 동작하는 환경을 설정
 				transpiler : 'typescript',
-				map : {
+				map : { // SystemJS 동작에 필요한 패키지를 CDN에서 가져오도록 설정
 					'rxjs' : 'https://unpkg.com/rxjs@5.3.0',
 					'@angular/core' : 'https://unpkg.com/@angular/core@4.1.0',
 					'@angular/common' : 'https://unpkg.com/@angular/common@4.1.0',
@@ -22,10 +23,11 @@
 					'@angular/platform-browser-dynamic' : 'https://unpkg.com/@angular/platform-browser-dynamic@4.1.0'
 				}
 			});
-			System.import('main.ts');
+			System.import('main.ts'); // 메인 모듈을 실행하도록 main.ts 파일을 로드
 		</script>
 	</head>
 	<body>
+		<!-- 컴포넌트가 표시될 위치를 지정한 것이며, 셀렉터와 템플릿은 main.ts에 정의-->
 		<hello-world></hello-world>
 	</body>
 </html>
