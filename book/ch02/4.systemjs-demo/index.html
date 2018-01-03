@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://unpkg.com/es6-promise@4.1.0"></script>
+    <script src="https://unpkg.com/systemjs@0.19.47/dist/system.src.js"></script>
+    <script>
+        // SystemJS 설정
+        System.config({
+            transpiler : 'traceur',
+            map : {
+                'traceur' : 'https://unpkg.com/traceur@0.0.111/bin/traceur.js'
+            }
+        });
+
+        // 모듈 로드
+        Promise.all([ // Promise.all() 함수는 인자로 넘겨진 작업이 모두 끝나면 Promise 객체를 반환
+            System.import('./es6module.js'), // ES6 모듈 문법을 사용한 es6module.js 파일 경로를 지정
+            System.import('./es5module.js') // ES6와 같은 방식으로 모듈을 불러오지만, SystemJS가 CommonJS 형식으로 인식
+        ]).then(function(modules) { // SystemJS가 동작하는 범위 밖 -> ES5 버전의 코드로 변환X
+            var moduleNames = modules
+                .map(function(m){return m.name;}) // 각각의 모듈에서 name 프로퍼티 추출
+                .join(', '); // 불러온 모듈의 name 프로퍼티를 문자열 하나로 연결
+            console.log('The following modules are loaded : ' + moduleNames);
+        });
+    </script>
+    </head>
+    <body></body>
+</html>
