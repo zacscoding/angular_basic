@@ -11,7 +11,7 @@ var core_2 = require("@angular/core");
 var platform_browser_1 = require("@angular/platform-browser");
 var platform_browser_dynamic_1 = require("@angular/platform-browser-dynamic");
 // 컴포넌트 선언
-var HelloWorldComponent = (function () {
+var HelloWorldComponent = /** @class */ (function () {
     function HelloWorldComponent() {
         this.name = 'Angular'; // name 프로퍼티 초기 값 할당
     }
@@ -24,7 +24,7 @@ var HelloWorldComponent = (function () {
     return HelloWorldComponent;
 }());
 // 모듈 선언
-var AppModule = (function () {
+var AppModule = /** @class */ (function () {
     function AppModule() {
     }
     AppModule = __decorate([
