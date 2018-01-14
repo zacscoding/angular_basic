@@ -8,9 +8,14 @@
 /app/**/*.js
 /app/**/*.js.map
 
+yarn.lock
+
 # dependencies
 /node_modules
 /bower_components
+
+**/node_modules
+**/bower_components
 
 # IDEs and editors
 /.idea
