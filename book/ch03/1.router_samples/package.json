@@ -1,6 +1,6 @@
 {
-  "name": "auction_ch2",
-  "description": "Sample Online Auction from Chapter 2",
+  "name": "router_samples",
+  "description": "Routing samples from Chapter 3 from the book Angular Development with TypeScript",
   "private": true,
   "scripts": {
     "start": "live-server"
@@ -11,12 +11,10 @@
     "@angular/core": "^4.1.0",
     "@angular/platform-browser": "^4.1.0",
     "@angular/platform-browser-dynamic": "^4.1.0",
-    "boostrap": "^2.0.0",
-    "bootstrap": "^3.3.7",
+    "@angular/router": "^4.1.0",
     "core-js": "^2.4.1",
-    "jquery": "^3.2.1",
     "rxjs": "5.3.0",
-    "systemjs": "0.19.47",
+    "systemjs": "^0.19.47",
     "zone.js": "^0.8.5"
   },
   "devDependencies": {
