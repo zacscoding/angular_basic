@@ -1,7 +1,8 @@
 # ch03 라우터로 내비게이션 구현하기
 
 - <a href="#3.1"> 3.1 라우터 </a>
-
+- <a href="#3.2"> 3.2 라우터로 데이터 전달하기 </a>
+- <a href="#3.3"> 3.3 자식 라우팅 </a> 
 
 
 <div id="3.1"></div>
@@ -95,6 +96,95 @@ import { RouterModule } from '@angular/router';
   ...
 })
 ```
+
+### 3.1.3 navigate() 함수 사용하기
+
+- 기존 : AppComponent 템플릿의 HTML 앵커태그에 routerLink를 추가해서 Angular  
+내비게이션 연결  
+- 사용자의 클릭 동작 없이 코드로 화면을 전환?
+
+> 버튼 클릭 시 '/product'  
+main-navigate.ts
+
+
+**404에러 처리**  
+=> 맨 마지막에 위치 시키면, 맨 마지막 조건을 만족
+
+```
+[
+  { path : '', component : HomeComponent },
+  { path : 'product', component : ProductDetailComponent },
+  { path : '**', component : _404Component}
+]
+```
+
+---
+
+<div id="3.2"> </div>
+
+## 3.2 라우터로 데이터 전달하기
+
+### 3.2.1 ActivatedRoute에서 라우팅 인자 추출하기
+
+> product-param.components, main-param.ts  
+
+1. 라우터를 설정하기 위해 컴포넌트 템플릿에 있는 routerLink를 확인  
+```<a [routerLink]="['/product', 1234]">Product Details</a>,```  
+2. routerLink에 지정된 URL을 파싱하고 주어진 값으로 라우팅 인자를 치환  
+3. 브라우저가 처리할 수 있도록 ```<a href="">``` 태그를 구성
+
+> code
+
+```
+...
+const routes : Routes = [
+    { path : '', component : HomeComponent },
+    // 라우팅 주소에 '/:id' 추가
+    { path : 'product/:id', component : ProductDetailComponentParam }
+];
+
+@Component({
+    selector : 'app',
+    // routerLink에 전달되는 배열의 항목은 2개
+    // '/product' :: 라우팅 주소, 1234 :: 상품의 ID
+    template : `
+        <a [routerLink]="['/']">Home</a>,        
+        <a [routerLink]="['/product', 1234]">Product Details</a>,
+        <router-outlet></router-outlet>
+    `
+})
+class AppComponent {}
+...
+```
+
+> HTML 코드  
+
+```
+...
+<a ng-reflect-router-link="/product,1234" href="#/product/1234">Product Details</a>
+....
+```
+
+### 3.2.2 라우터로 정적 데이터 전달하기
+; 데이터는 부모 컴포넌트에서 자식 컴포넌트로 전달할 수 있지만, 라우터를 설정하는 시점에  
+컴포넌트로 데이터를 전달할 수 있음 => 라우터 설정에 data 프로퍼티 사용
+
+```
+{ path : 'product/:id', component : ProductDetailComponentParam, data : [{isProd : true}] }
+```
+
+> product-param-data.component.ts, main-param-data.ts
+
+---
+
+<div id="3.3"> </div>
+
+## 3.3 자식 라우팅
+
+
+
+
+
 
 
 

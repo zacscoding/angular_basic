@@ -22,6 +22,9 @@ System.config({
         '@angular/platform-browser-dynamic' : { main : 'bundles/platform-browser-dynamic.umd.min.js' },
         '@angular/router' : { main : 'bundles/router.umd.min.js' },
 
-        'app' : { main : 'main', defaultExtension : 'ts' }
+        // 'app' : { main : 'main', defaultExtension : 'ts' }
+        // 'app' : { main : 'main-navigate', defaultExtension : 'ts' }
+        // 'app' : { main : 'main-param', defaultExtension : 'ts' }
+        'app' : { main : 'main-param-data', defaultExtension : 'ts' }
     }
 });

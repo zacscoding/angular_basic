@@ -8,12 +8,14 @@ import { LocationStrategy, HashLocationStrategy } from '@angular/common';
 // 라우터 설정을 불러옴
 import { routing } from './app.routing';
 
+
 @NgModule({
     // NgModule에 라우터 설정 추가
-    import : [BrowserModule, routing],
-    declarations : [
-        AppComponent, HomeComponent, ProductDetailComponent
-    ],
+    imports : [BrowserModule,
+        routing],
+    declarations : [AppComponent,
+        HomeComponent,
+        ProductDetailComponent],
     // HashLocationStrategy 방식을 사용하도록 프로바이더를 설정
     providers : [{ provide : LocationStrategy, useClass : HashLocationStrategy }],
     bootstrap : [AppComponent]
