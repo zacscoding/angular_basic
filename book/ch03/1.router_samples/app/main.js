@@ -21,10 +21,11 @@ var AppModule = /** @class */ (function () {
     AppModule = __decorate([
         core_1.NgModule({
             // NgModule에 라우터 설정 추가
-            import: [platform_browser_1.BrowserModule, app_routing_1.routing],
-            declarations: [
-                app_component_1.AppComponent, home_component_1.HomeComponent, product_component_1.ProductDetailComponent
-            ],
+            imports: [platform_browser_1.BrowserModule,
+                app_routing_1.routing],
+            declarations: [app_component_1.AppComponent,
+                home_component_1.HomeComponent,
+                product_component_1.ProductDetailComponent],
             // HashLocationStrategy 방식을 사용하도록 프로바이더를 설정
             providers: [{ provide: common_1.LocationStrategy, useClass: common_1.HashLocationStrategy }],
             bootstrap: [app_component_1.AppComponent]

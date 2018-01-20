@@ -2,7 +2,9 @@
 
 - <a href="#3.1"> 3.1 라우터 </a>
 - <a href="#3.2"> 3.2 라우터로 데이터 전달하기 </a>
-- <a href="#3.3"> 3.3 자식 라우팅 </a> 
+- <a href="#3.3"> 3.3 자식 라우팅 </a>
+- <a href="#3.4"> 3.4 라우팅 가드(Route Guards) </a>
+- <a href="#3.4"> 3.5 라우팅 영역 여러개 만들기</a>
 
 
 <div id="3.1"></div>
@@ -180,6 +182,41 @@ class AppComponent {}
 <div id="3.3"> </div>
 
 ## 3.3 자식 라우팅
+; Angular APP는 부모-자식 관계로 구성된 컴포넌트의 집합  
+=> 각 컴포넌트는 캡슐화 되기 때문에 원하는 동작은 컴포넌트 안에서 모두 구현 등등  
+
+> main-child.ts , product-child.component.ts , product-description.component.ts, seller.component.ts
+
+---
+
+## 3.4 라우팅 가드(Route Guards)
+; 사용자가 라우터를 통해 들어오거나 나갈 떄 유효성을 검증하고 검증 결과를  
+라우터에 반영  
+
+- 사용자가 인증을 한 후에만 라우팅을 수행하고, 인증을 하지 않았다면 인증을 하게 함  
+- 컴포넌트 몇 개로 만든 폼을 화면에 표시 & 이 폼에 유효한 데이터를 입력한 경우에만 내비게이션을 허용
+- 라우터에서 빠져나갈 때 저장히자 않은 정보가 있는 것을 사용자에게 알림
+
+
+> CanActive 인터페이스  
+
+=> canActive() 함수를 통해 유효성을 검증해 true, false 값을 반환  
+
+> CanDeActive 인터페이스  
+
+=> canDeActive() true를 통해 라우터 내비게이션을 벗어날 수 있음  
+
+> 라우팅 차단 test & 라우터를 벗어날 때 핸들링
+main-with-guard.ts , guards/login.guard.js, guards/unsaved_changes.guard.ts
+
+---
+
+<div id="3.5"></div>
+
+## 3.5 라우팅 영역 여러개 만들기  
+
+
+
 
 
 
