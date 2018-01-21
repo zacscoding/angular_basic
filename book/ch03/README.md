@@ -4,7 +4,10 @@
 - <a href="#3.2"> 3.2 라우터로 데이터 전달하기 </a>
 - <a href="#3.3"> 3.3 자식 라우팅 </a>
 - <a href="#3.4"> 3.4 라우팅 가드(Route Guards) </a>
-- <a href="#3.4"> 3.5 라우팅 영역 여러개 만들기</a>
+- <a href="#3.5"> 3.5 라우팅 영역 여러개 만들기</a>
+- <a href="#3.6"> 3.6 모듈 단위로 앱 나누기</a>
+- <a href="#3.7"> 3.7 모듈 지연 로딩 </a>
+- <a href="#3.8"> 3.8 실습 : 네비게이션 추가하기 </a>
 
 
 <div id="3.1"></div>
@@ -215,25 +218,98 @@ main-with-guard.ts , guards/login.guard.js, guards/unsaved_changes.guard.ts
 
 ## 3.5 라우팅 영역 여러개 만들기  
 
+> 활용예제  
 
+- Gmail에서 받은 편지함 + 새로운 메일 쓰기
+- 대시보드 SPA에서 각 영역에 하나 이상의 컴포넌트를 동시에 렌더링
+- SPA에서 현재 화면에 접속한 사용자들과 대화하는 기능 등등
 
+```
+<router-outlet></router-outlet>
+<router-outlet name="chat"></router-outlet>
+```
 
+> 라우팅 영역을 추가하고 채팅 뷰를 렌더링  
+=> main_aux.ts
 
+---
 
+<div id="3.6"> </div>
 
+## 3.6 모듈 단위로 앱 나누기
+; Angular 애플리케이션은 특정 기능을 제공하는 모듈을 불러와 사용  
+e.g) AppModule, BrowserModule, RouterModule ..  
+=> 기능 모듈은 필요한 컴포넌트, 서비스, 다른 리소스를 묶어 개별폴더로  
+관리하는 것을 권장
 
+```
+@NgModule({
+    imports : [BrowserModule, RouterModule.forRoot(routes)],
+    ...
+})
+class AppModule{}
 
+platformBrowserDynamic().bootstrapModeul(AppModule);
+```
 
+> Exmaple  
+main-luxury.ts , components/luxury/luxury.module.ts, components/luxury/luxury.component.ts
 
+- 고급 상품 판매를 중단 ?  
+=> 루트 모듈에 사용한 LuxuryModule을 빼고, AppComponent의 해당 링크 삭제  
+- 고급 상품 판매 기능 추가도 간편히 적용
 
+---
 
+<div id="3.7"></div>
 
+## 3.7 모듈 지연 로딩 (lazy loading)
+; 모듈이 필요할 때 따로 내려 받는 것  
 
+> Eg) 고급 상품 페이지를 지연로딩으로 변경  
+main-luxury-lazy.ts , components/luxury/luxury.lazy.module.ts  
 
+=> 애플리케이션의 인지 성능(perceived performance)을 높일 수 있음  
+(사용자가 느끼는 애플리케이션의 동작 속도)
 
+---
 
+<div id="3.8"></div>
 
+## 3.8 실습 : 네비게이션 추가하기
 
+> 진행 순서  
 
+1. 상품의 상세 정보를 표시하는 ProductDetailComponent 구현
+2. HomeComponent 코드를 리팩토링해서 캐러셀을 캡슐화하고 페이지 레이아웃을  
+그리드로 정리
+3. products 주소에 대한 라우터를 설정할 때, 상품 이름을 사용.  
+ProductDetailComponent 는 ActivatedRoute 객체에서 상품의 이름을 받아  
+화면에 표시
+4. ApplicationComponent에 라우팅 영역을 추가하고, 이 영역에 HomeComponent나  
+ProductDetailComponent를 렌더링  
+5. ProductItemComponent 템플릿에 있는 <a> 태그에 [routerLink] 디렉티브를 추가하고  
+사용자가 상품의 이름을 클릭하면 상품 상세 정보로 라우팅  
 
-<br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br />
+![auction](./pics/3_2_auction.png)
+
+---
+
+## Summary  
+
+- 라우터는 모듈에서 설정
+- 라우터는 주소와 컴포넌트를 매핑  
+- 라우터와 연결된 컴포터는가 렌더링되는 위치는 컴포넌트  
+템플릿에서 <router-outlet> 태그로 지정  
+- routerLink는 라우터 이름을 지정해서 사용할 수 도 있다
+- navigate() 함수를 사용할 때도 라우터 이름을 지정할 수 있다
+- 라우터를 통해 인자를 전달하려면 라우터 설정의 path 프로퍼티가 인자를 받도록  
+지정해야 하며(path : 'product/:id'), 이 값은 routerLink나 navigate() 함수를  
+사용할 때 전달
+- 라우터를 통해 인자를 받으려면, 인자를 받는 컴포넌트의 생성자에 ActivatedRoute를  
+의존성으로 주입하고 이 객체를 통해 값을 참조해야 한다
+- 라우터를 여러 계층으로 구성하려면 Routes 인터페이스를 정의할 때 children 프로퍼티로  
+지정  
+- 라우터에 이름을 지정해서 사용하면 여러 개의 라우터를 동시에 사용할 수 있다.
+- 모듈 지연 로딩을 사용하면 애플리케이션이 처음 실행 될 때 필요한 코드의 양을 최소화  
+할 수 있고, 이 모듈은 필요한 시점에 서버에서 내려받아 APP에 불러올 수 있음
