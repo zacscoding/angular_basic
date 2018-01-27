@@ -3,7 +3,9 @@
 - <a href="#4.1">4.1 의존성 주입과 제어권 역전</a>
 - <a href="#4.2">4.2 인젝터와 프로바이더</a>
 - <a href="#4.3">4.3 의존성 주입 예제</a>
-
+- <a href="#4.4">4.4 프로바이더 변경하기  </a>
+- <a href="#4.5">4.5 인젝터의 계층 구조</a>
+- <a href="#4.6">4.6 실습 : 의존성 주입 패턴 확인하기</a>
 
 ## 이장에서 다루는 내용
 - 의존성 주입 디자인 패턴
@@ -186,6 +188,292 @@ Http 타입을 명시
 > 클래스에 주입되는 객체도 스스로 의존성을 가지는 예
 
 ![의존성 주입 예제](./pics/[4.5]di_byself.png)
+
+> ProductService에 Http 객체 주입 & Http객체를 이용해 product.json 파일에 있는  
+상품 정보를 불러오는 코드
+
+```
+import { Http } from '@angular/http';
+import { Injectable } from '@angular/core';
+
+@Injectable()
+export class ProductService {
+  constructor(private http : Http) {
+    const products = http.get('package.json');
+  }
+  // 필요한 코드는 계속 구현
+}
+```
+
+> Http 객체의 프로바이더는 HttpModule에서 다양한 형태로 정의  
+=> APP에서 HttpModule을 불러와 사용
+
+```
+import { HttpModule } from '@angular/http';
+...
+
+@NgModule({
+  imports : [
+    BrowserModule,
+    HttpModule
+  ],
+  declarations : [AppComponent],
+  bootstrap : [AppComponent]
+})
+export class AppModule {}
+```
+
+---
+
+<div id="4.4"> </div>
+
+## 4.4 프로바이더 변경하기  
+
+=> ProductService가 구현되지 않았다면?  
+1) ProductService에 하드코딩으로 임시 정보를 추출  
+2) MockProductService 생성  
+
+
+> Ex) 서로 다른 서비스를 사용해 상품 정보 렌더링  
+main-change-provider.ts
+
+![](./pics/[4.6]diff_di_example.png)
+
+```
+class MockProductService implements ProductService {
+    getProduct(): Product {
+        return new Product('Galaxy S8');
+    }
+}
+```
+
+=> TypeScript에서 클래스를 인터페이스로 사용가능 <br />
+
+
+```
+@NgModule({
+    imports : [BrowserModule],
+    // 애플리케이션 계층의 인젝터에 ProductService 프로바이더를 등록
+    providers : [ProductService],
+    declarations : [AppComponent, Product1Component, Product2Component],
+    bootstrap : [AppComponent]
+})
+class AppModule{}
+
+@Component({
+    selector : 'product1',
+    template : '{{ product.title }}'
+})
+class Product1Component {
+    product : Product;
+    // ProductService 의존성 주입
+    constructor(private productService : ProductService) {
+        this.product = productService.getProduct();
+    }
+}
+
+@Component({
+    selector : 'product2',
+    template : '{{ product.title }}',
+    // MockProductService 지정
+    providers : [ {provide : ProductService, useClass : MockProductService}]
+})
+class Product2Component {
+    product : Product;
+    // 생성자의 코드를 변경할 필요X => MockProductService 의존성 주입
+    constructor(private productService : ProductService) {
+        this.product = productService.getProduct();
+    }
+}  
+```  
+
+=> Product1Component는 부모 계층에서 프로바이더 지정한 것 사용 & Product2Component는  
+오버라이드하여 사용  
+
+> 만약 ProductService를 임시로 사용하지 않으려면?  
+
+```
+@NgModule({
+    ...    
+    providers : [{provider:ProductService, useClass:MockProductService}],
+    ...
+})
+```
+
+### 4.4.1 프로바이더에 useFactory와 useValue 사용하기  
+
+> main-factory.ts
+
+```
+@Component({
+    ...
+    providers : [{
+        provide : ProductService,
+        // 팩토리함수는 isDev 인자를 사용 & 이 값은 외부에서 주입
+        useFactory : (isDev) => {
+            if(isDev) {
+                return new MockProductService();
+            }
+            else {
+                return new ProductService();
+            }
+        },
+        // deps : 팩토리 함수에서 사용하는 의존성 객체
+        deps : ['IS_DEV_ENVIRONMENT']
+    }],
+    template : '{{ product.title }}'
+})
+class Product2Component {
+    ...
+}
+
+@NgModule({
+    ...
+    // 고정 된 값을 IS_DEV_ENVIRONMENT 토큰으로 등록하려면, useValue를 사용해서 값을 지정
+    providers : [ProductService, {provide : 'IS_DEV_ENVIRONMENT', useValue : false}],
+    ...
+})
+class AppModule{}
+```
+
+
+> 팩토리를 프로바이더로 사용하는 과정  
+
+![팩토리를 프로바이더로 사용하는 과정](./pics/[4.8]factory_provider.png)
+
+
+
+### 4.4.2 불투명 토큰(OpaqueToken) 사용하기  
+; IS_DEV_ENVIRONMENT와 같은 토큰을 사용할 경우, 다른 프로바이더의 이름과 겹치면 문제 발생 등  
+
+> main-opaque-token.ts  
+
+```
+import { Component, OpaqueToken, Inject, NgModule } from '@angular/core';
+import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+import { BrowserModule } from '@angular/platform-browser';
+
+export const BackendUrl = new OpaqueToken('BackendUrl');
+
+@Component({
+    selector : 'app',
+    template : 'URL : {{ url }}'
+})
+class AppComponent {
+    constructor (@Inject(BackendUrl) public url) {
+    }
+}
+
+@NgModule({
+    imports : [BrowserModule],
+    declarations : [AppComponent],
+    providers : [{ provide : BackendUrl, useValue : 'myQAserver.com' }],
+    bootstrap : [AppComponent]
+})
+class AppModule {}
+```
+
+---
+
+<div id="4.5"> </div>
+
+## 4.5 인젝터의 계층 구조
+; Angular 애플리케이션은 컴포넌트의 계층으로 구성  
+루트 인젝터를 사용해 애플리케이션 객체를 생성 & 이 인젝터는 생성된 애플리케이션의  
+구조를 따라가면서 컴포넌트의 계층을 만들고 컴포넌트 인젝터를 생성  
+
+> 인젝터의 계층 구조  
+
+![인젝터의 계층 구조](./pics/[4.9]injector_structure.png)
+
+=> 컴포넌트가 생성될 때 의존성으로 주입되는 객체가 있으면, 컴포넌트의 인젝터는  
+컴포넌트 계층에 프로바이더가 등록되어있는지 찾음  
+=> 적절한 프로바이더가 존재하면, 그 프로바이더 사용  
+=> 존재하지 않으면 부모 컴포넌트에 프로바이더를 찾음  
+=> 끝까지 존재하지 않으면 에러 발생  
+
+**지연 로딩모듈**  
+지연 로딩 모듈을 사용하면, 인젝터를 추가로 생성  
+=> 지연 로딩 모듈에 등록된 프로바이더는 해당 모듈 안에서만 사용  
+모듈 밖에서는 사용X
+
+> 4.4절에서 사용한 Example  
+
+```
+@Component({
+    selector : 'product1',
+    template : '{{ product.title }}'
+})
+class Product1Component {
+    product : Product;
+    // ProductService 의존성 주입
+    constructor(private productService : ProductService) {
+        this.product = productService.getProduct();
+    }
+}
+...
+@Component({
+    selector : 'app',
+    // 2개의 컴포넌트 랜더링
+    template : `
+        <h2>A root component hosts two products <br>
+            provided by different services</h2>
+        <product1></product1>
+        <br/>
+        <product2></product2>
+    `
+})
+class AppComponent{}
+
+@NgModule({
+    imports : [BrowserModule],
+    // 애플리케이션 계층의 인젝터에 ProductService 프로바이더를 등록
+    providers : [ProductService],
+    declarations : [AppComponent, Product1Component, Product2Component],
+    bootstrap : [AppComponent]
+})
+class AppModule{}  
+```
+
+- Product1Component에서 프로바이더를 찾음. (이 계층에는 ProductService에  
+  해당하는 프로바이더 X)
+- 부모 컴포넌트인 AppComponent에서 프로바이더를 찾음 (여기에도 X)  
+- 상위 모듈인 AppModule에서 프로바이더를 찾음. (여기에는 providers 등록 되어있음)
+- 모듈 계층의 인젝터를 사용해서 ProductService 인스턴스 생성 & 이 인스턴스를 모듈 계층에 둠  
+(앱 모듈이 애플리케이션이므로, 애플리케이션의 인젝터로 봐도 무방)  
+- Product2Component의 경우 같은 토큰의 프로바이더가 존재하므로, 다른 인스턴스가 생성되어 주입  
+
+### 4.5.1 viewProviders  
+;자식 컴포넌트나 외부 컴포넌트를 배제하고, 등록하는 계층에서만 프로바이더를 사용하려면  
+providers 프로퍼티 대신 viewProviders 프로퍼티를 사용  
+
+
+```
+<root>
+  <product2>
+    <luxury-product></luxury-product>
+  </product2>
+</root>
+```
+
+가정 : AppModule과 Product2Component는 각각 ProductService 토큰에 대한 프로바이더를 등록   
+
+WTD : LuxuryProductComponent에서는 Product2Component에서 등록한 프로바이더를 사용하지 못하게 하기   
+=> Product2Component에 사용한 providers 프로퍼티를 viewProviders로 변경  
+
+---
+
+<div id="4.6"> </div>
+
+## 4.6 실습 : 의존성 주입 패턴 확인하기
+
+
+
+
+
+
+
+
 
 
 

@@ -22,7 +22,3 @@ export default class ProductComponent {
     }
 }
 
-
-export class ProductService {
-    ...
-}
