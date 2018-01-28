@@ -1,6 +1,6 @@
 {
-  "name": "DI_samples",
-  "description": "A sample DI project for Chapter 4",
+  "name": "auction_ch4",
+  "description": "Sample Online Auction from Chapter 4",
   "private": true,
   "scripts": {
     "start": "live-server"
@@ -9,18 +9,18 @@
     "@angular/common": "^4.1.0",
     "@angular/compiler": "^4.1.0",
     "@angular/core": "^4.1.0",
-    "@angular/forms": "^4.1.0",
-    "@angular/http": "^4.1.0",
     "@angular/platform-browser": "^4.1.0",
     "@angular/platform-browser-dynamic": "^4.1.0",
     "@angular/router": "^4.1.0",
+    "bootstrap": "^3.3.7",
     "core-js": "^2.4.1",
-    "rxjs": "^5.3.0",
-    "systemjs": "^0.19.47",
+    "jquery": "^3.2.1",
+    "rxjs": "5.3.0",
+    "systemjs": "0.19.47",
     "zone.js": "^0.8.5"
   },
   "devDependencies": {
-    "live-server": "^1.2.0",
+    "live-server": "1.2.0",
     "@types/es6-shim": "0.0.28",
     "typescript": "^2.3.3"
   }

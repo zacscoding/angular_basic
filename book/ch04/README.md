@@ -6,6 +6,7 @@
 - <a href="#4.4">4.4 프로바이더 변경하기  </a>
 - <a href="#4.5">4.5 인젝터의 계층 구조</a>
 - <a href="#4.6">4.6 실습 : 의존성 주입 패턴 확인하기</a>
+- <a href="#4.7">4.7 정리</a>
 
 ## 이장에서 다루는 내용
 - 의존성 주입 디자인 패턴
@@ -466,6 +467,253 @@ WTD : LuxuryProductComponent에서는 Product2Component에서 등록한 프로�
 <div id="4.6"> </div>
 
 ## 4.6 실습 : 의존성 주입 패턴 확인하기
+
+#### ch3 auction review
+
+> 상품 정보를 받아올 서비스의 프로바이더 : app.module.ts  
+
+```
+@NgModule({
+    ...
+    // ProductService 프로파이더 선언 -> ApplicationComponent에 주입될 때 사용
+    providers : [ProductService,
+        { provide : LocationStrategy, useClass : HashLocationStrategy}],
+    bootstrap : [ApplicationComponent]
+})
+export class AppModule {}
+```
+
+> home.ts  
+
+```
+import { Component } from "@angular/core";
+import { Product, ProductService } from "../../services/product.service";
+
+@Component({
+  selector : 'auction-home-page',
+  styleUrls : ['app/components/home/home.component.css'],
+  template : `
+      <div class="row carousel-holder">
+          <div class="col-md-12">
+              <auction-carousel></auction-carousel>
+          </div>
+      </div>
+      <div class="row">
+          <div *ngFor="let product of products" class="col-sm-4 col-lg-4 col-md-4">
+              <auction-product-item [product]="product"></auction-product-item>
+          </div>
+      </div>
+  `
+})
+export default class HomeComponent {
+    products : Product[] = [];
+
+    constructor(private productService : ProductService) {
+        this.products = this.productService.getProducts();
+    }
+}
+```
+
+=> ProductService 프로바이더는 앱 모듈에 등록 -> 모든 컴포넌트에서 사용 가능  
+=> HomeComponent에서는 별도 등록 없이 ProductService를 주입  
+=> HomeComponent가 생성되면 ProductService 인스턴스가 의존성으로 주입 &  
+getProducts() 함수가 실행 된 후 상품 정보가 담긴 배열을 products 프로퍼티에 할당  
+=> *ngFor 루프를 사용해 배열에 있는 항목의 개수만큼 <action-product-item> 컴포넌트를 생성  
+
+> app/components/product-item/product-item.component.html  
+
+```
+<h4><a [routerLink]="['/products', product.title]">{{ product.title }}</a></h4>
+```  
+
+=> 링크 클릭 시 ProductDetailComponent 렌더링 & product.title 값을 인자로 전달  
+
+### Auction preview  
+
+![옥션_상품_상세](./pics/[4.13]auction-product-detail.png)  
+
+
+### 4.6.1 라우터 인자를 상품 ID로 수정하기  
+
+> product-item.component.html  
+
+```
+...
+<h4><a [routerLink]="['/products', product.id]">{{ product.title }}</a></h4>
+...
+```
+
+### 4.6.2 ProductDetailComponent 수정  
+
+> ApplicationComponent 구조  
+
+![APP컴포넌트구조](./pics/[4.12]component-structure.png)  
+
+> app.module.ts   
+product/:productId로 변경
+
+```
+@NgModule({
+    imports : [BrowserModule,
+        RouterModule.forRoot([
+            {path : '', component : HomeComponent},
+            {path : 'products/:productId', component : ProductDetailComponent }
+
+        ])
+    ...
+```
+
+> product-detail.component.ts  
+
+```
+import { Component } from "@angular/core";
+import { ActivatedRoute } from "@angular/router";
+import { Product, Review, ProductService } from "../../services/product.service";
+
+@Component({
+    selector : 'auction-product-page',
+    templateUrl : 'app/components/product-detail/product-detail.component.html'
+})
+export default class ProductDetailComponent {
+    product : Product;
+    reviews : Review[]
+    // ActivatedRoute와 ProductService 의존성 주입
+    constructor (route : ActivatedRoute, productService : ProductService) {
+        let prodId : number = parseInt(route.snapshot.params['productId']);
+        this.product = productService.getProductById(prodId);
+        this.reviews = productService.getReviewsForProduct(prodId);
+    }
+}
+```
+
+> product-detail.component.html  
+
+```
+<div class="thumbnail">
+  <img src="http://placehold.it/820x320">
+  <div>
+    <h4 class="pull-right"> {{product.price}} </h4>
+    <h4> {{product.title}} </h4>
+    <p>{{product.description}}</p>
+  </div>
+  <div class="ratings">
+    <p class="pull-right">{{reviews.length}} reviews</p>
+    <p>
+      <auction-stars [rating]="product.rating"></auction-stars>
+    </p>
+  </div>
+</div>
+<div class="well" id="reviews-anchor">
+  <div class="row">
+    <div class="col-md-12"></div>
+  </div>
+  <div class="row" *ngFor="let review of reviews">
+    <hr>
+    <div class="col-md-12">
+      <auction-stars [rating]="review.rating"></auction-stars>
+      <span>{{review.user}}</span>
+      <!--
+      파이프 연산자(|) 를 사용하면 값의 형식을 변환하는 필터 사용
+      https://angular.io/api/common/DatePipe
+      -->
+      <span class="pull-right">{{review.timestamp | date : 'shortDate'}}</span>
+      <p>{{ review.comment }}</p>
+    </div>
+  </div>
+</div>
+```  
+
+> Product, Review 클래스  in product.service.ts
+
+```
+export class Product {
+  constructor(public id: number,
+              public title: string,
+              public price: number,
+              public rating: number,
+              public description: string,
+              public categories: Array<string>) {
+  }
+}
+
+export class Review {
+  constructor(public id: number,
+              public productId: number,
+              public timestamp: Date,
+              public user: string,
+              public rating: number,
+              public comment: string) {
+
+  }
+}
+```
+
+> product.service.ts  
+
+```
+@Injectable()
+export class ProductService {
+  getProducts(): Array<Product> {
+    return products.map(p => new Product(p.id, p.title, p.price, p.rating, p.description, p.categories));
+  }
+
+  getProductById(productId: number): Product {
+    return products.find(p => p.id === productId);
+  }
+
+  getReviewsForProduct(productId: number): Review[] {
+    return reviews
+    .filter(r => r.productId === productId)
+    .map(r => new Review(r.id, r.productId, new Date(r.timestamp), r.user, r.rating, r.comment));
+  }
+}
+```  
+
+**ES5로 컴파일할 때 ES6 API 사용하기**  
+1) @types/es6-shim 패키지 사용  
+```
+-- package.json
+"devDependencies": {
+    "@types/es6-shim": "0.0.28",
+    ..
+-- tsconfig.json  
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "module": "commonjs",
+    "target": "ES5",
+    "noEmit": true,
+    "types":["es6-shim"]
+  },
+
+  "exclude": [
+    "node_modules"
+  ]
+}
+```
+
+2) TypeScript 컴파일러 옵션에 "lib" : ["es2015"] 추가  
+
+
+
+
+
+
+---
+
+<div id="4.7"></div>
+
+## 4.7 정리  
+
+- 의존성으로 주입될 객체는 프로바이더에 등록한다  
+- 프로바이더에는 객체뿐 아니라 문자열도 사용할 수 있다
+- 인젝터는 계층을 이루며 구성되고, 컴포넌트 계층에서 원하는 프로바이더를 찾지 못하면  
+부모 계층의 인젝터를 따라 올라가며 프로바이더를 찾는다  
+- providers 프로퍼티에 등록 된 객체는 자식 컴포넌트에서도 사용할 수 있지만  
+viewProviders에 등록 된 객체는 그 프로바이더가 선언된 계층에서만 사용가능
+
+
 
 
 
