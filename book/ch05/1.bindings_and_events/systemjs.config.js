@@ -24,6 +24,8 @@ System.config({
 
     //'app' : { main : 'bindings/attribute-vs-property', defaultExtension :'ts' }
     // 'app': {main: 'bindings/template-bindings', defaultExtension: 'ts'}
-    'app': {main: 'bindings/two-way-bindings', defaultExtension: 'ts'}
+    // 'app': {main: 'bindings/two-way-bindings', defaultExtension: 'ts'}
+    // 'app': {main: 'observables/observable-events', defaultExtension: 'ts'}
+    'app': {main: 'observables/observable-events-http', defaultExtension: 'ts'}
   }
 });

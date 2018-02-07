@@ -12,6 +12,7 @@
 
 - <a href="#5.1">5.1 데이터 바인딩</a>
 - <a href="#5.2">5.2 반응형 프로그래밍과 옵저버블</a>
+- <a href="#5.3">5.3 파이프</a>
 
 
 <div id="5.1"></div>
@@ -166,6 +167,257 @@ platformBrowserDynamic().bootstrapModule(AppModule);
 <div id="5.2"></div>
 
 ## 5.2 반응형 프로그래밍과 옵저버블
+; 반응형 프로그래밍(Reactive Programming)은 옵저버블(Observables) 이벤트 스트림을  
+구독(subscribe)하고, 이 스트림에 반응하는 방식으로 동작하는 애플리케이션  
+
+### 5.2.1 옵저버와 옵저버블이 무엇인가?  
+
+- 옵저버블 : 연속된 데이터 스트림을 생성하는 객체  
+  - 콜드 옵저버블(cold observables) : 구독자가 있는 경우에만 스트리밍 데이터 생성  
+  - 핫 옵저버블(hot observables) : 데이터를 받는 구독자가 없어도, 스트리밍 함  
+- 옵저버 : 위 스트림을 구독해서 사용하는 객체  
+
+> 옵저버블 객체로부터 스트림을 구독  
+
+```
+let mySubscription : Subscription = someObservable.subscribe(myObserver);
+```
+
+> 스트림 구독을 멈춤  
+
+```
+mySubscription.unscribe();
+```
+
+**옵저버블**  
+; 소켓이나 배열, 화면에서 발생한 이벤트 등과 같은 데이터 소스를 한번에 하나씩,  
+연속으로 보내는(스트리밍,streaming) 객체  
+- 다음 엘리먼트를 전달
+- 에러를 전달  
+- 스트리밍이 종료되었다는 신호를 전달  
+
+**옵저버**  
+- 다음 엘리먼트를 받았을 때 처리하는 함수
+- 에러를 받았을 때 처리하는 함수
+- 데이터 스트림이 끝났을 때 실행하는 함수  
+
+
+![옵저버블 데이터 흐름](./pics/[5-4]옵저버블_데이터_흐름.png)
+
+[link : reactivex.io/document/operators](http://reactivex.io/documentation/operators.html)
+
+[link : Rx함수에 따른 구슬 다이어 그램](http://rxmarbles.com/)
+
+### 5.2.2 옵저버블 이벤트 스트림  
+; 이벤트는 Event 객체로 표현되며, 어디에서 어떤 이벤트가 발생했는지, 발생한  
+이벤트에 대한 정보를 담고 있음  
+
+```
+template : `<input (keyup)="onKey($event)">`
+...
+onKey(event : any) {
+  console.log('You have entered ' + event.target.value);
+}
+```  
+
+=> event.target을 사용해 ```<input>``` 엘리먼트의 value 프로퍼티에 접근  
+
+> Angular의 템플릿 지역변수 사용  
+
+```
+template : `<input #mySearchField (keyup)="onKey(mySearchField.value)">`
+...
+onKey(value : string) {
+  console.log('You have entered ' + value);
+}
+```  
+
+=> ```<input>``` 엘리먼트에 mySearchField 템플릿 지역 변수 지정  
+& 이벤트 핸들러 함수에 Event 객체 대신 엘리먼트의 프로퍼티를 직접 전달  
+
+=> JavaScript APP에서는 일반적으로 이벤트를 한번만 처리 BUT Angular에서는  
+이벤트를 시간에 따라 연속적으로 발생하는 옵저버블 스트림으로 처리  
+
+=> 구독자가 스트림을 구독하는 것은 스트림 발행자에게 스트림을 받고 싶다고 알리는 것  
+(스트림을 구독하는 동안 스트림 엘리먼트를 받고 이에 반응해서 함수를 실행하며,  
+에러를 처리하거나 스트림이 종료되었을 때 필요한 동작도 할 수 있음 + subscribe() 함수를  
+통해 다른 함수를 체이닝 가능)  
+
+> E.G  
+
+```
+<input type='text' (keyup)="getStockPrice($event)">
+```  
+
+=> keyup이벤트가 발생할 때 마다 getStockPrice() 함수를 실행  
+=> A, AA, AAP, AAPL 이 입력되는동안 4번 서버로 요청을 보냄  
+=> 불필요한 요청을 제어하기 위해 setTimeout() 함수를 사용 할 수 있음  
+=> BUT AAP까지 입력하고, 특정 time이 지난 뒤 AAPL을 입력하면 ?  
+=> AAP까지의 파라미터값을 기준으로 서버로 요청 & 다음 time 까지 기다림  
+
+> 옵저버블 EG : observables/observable-event.ts
+
+```
+import {platformBrowserDynamic} from "@angular/platform-browser-dynamic";
+import {NgModule, Component} from "@angular/core";
+import {BrowserModule} from "@angular/platform-browser";
+import {FormControl, ReactiveFormsModule} from "@angular/forms";
+// rxjs/Rx를 이용해 모든 함수를 불러오거나 특정 함수를 지정
+// => 애플리케이션 최적화를 위해 사용하는 함수만 불러오는 게 좋음
+import 'rxjs/add/operator/debounceTime';
+
+@Component({
+  selector: 'app',
+  // <input> 엘리먼트는 컴포넌트 프로퍼티 searchInput으로 바인딩되서 폼 컨트롤로 동작
+  template: `
+    <h2>Observable events demo</h2>
+    <input type="text" placeholder="Enter stock" [formControl]="searchInput">
+  `
+})
+class AppComponent {
+  searchInput: FormControl = new FormControl('');
+
+  constructor() {
+    this.searchInput.valueChanges
+    // <input> 엘리먼트는 다음 이벤트를 바로 발생시지 않고 500MS 지연
+    .debounceTime(500)
+    // 옵저버블 스트림을 구독
+    .subscribe(stock => this.getStockQuoteFromServer(stock));
+  }
+
+  getStockQuoteFromServer(stock: string) {
+    console.log(`The price of ${stock} is ${100 * Math.random().toFixed(4) }`);
+  }
+}
+
+@NgModule({
+  // 반응형 폼 모듈을 앱 모듈에 불러옴
+  imports: [BrowserModule, ReactiveFormsModule],
+  declarations: [AppComponent],
+  bootstrap: [AppComponent]
+})
+class AppModule {
+}
+
+platformBrowserDynamic().bootstrapModule(AppModule);
+```
+
+### 5.2.3 옵저버블 취소하기  
+; 옵저버블이 Promise 보다 좋은 점은 동작이 완료되기 전에 취소할 수 있음  
+
+***가정*** : 상품 목록 중 하나를 클릭하여 상세 정보를 받아올 때,  상세 정보 요청 후  
+다른 제품을 요청할 경우?  
+
+> 날씨 정보를 받아오는 예제 : observables/observable-events-http.ts  
+
+```
+yarn add @angular/http
+```
+
+```
+import {platformBrowserDynamic} from "@angular/platform-browser-dynamic";
+import {NgModule, Component} from "@angular/core";
+import {BrowserModule} from "@angular/platform-browser";
+import {FormControl, ReactiveFormsModule} from "@angular/forms";
+// HTTP 요청을 보내기 위해 HttpModule과 Http 클래스를 불러옴
+import {HttpModule, Http} from "@angular/http";
+import {Observable} from "rxjs/Observable";
+
+import 'rxjs/add/operator/switchMap';
+import 'rxjs/add/operator/map';
+import 'rxjs/add/operator/debounceTime';
+import 'rxjs/add/operator/catch';
+import 'rxjs/add/observable/of';
+
+@Component({
+  selector: 'app',
+  template: `
+    <h2>Observable weather</h2>
+    <input type="text" placeholder="Enter city" [formControl]="searchInput">
+    <h3>{{ temperature}}</h3>
+  `
+})
+export class AppComponent {
+  private baseWeatherURL: string = 'http://api.openweathermap.org/data/2.5/weather?q=';
+  private urlSuffix: string = '&units=metric&appid=ca3f6d6ca3973a518834983d0b318f73';
+
+  searchInput: FormControl = new FormControl();
+  temperature: string;
+
+  constructor(private http: Http) {
+    this.searchInput.valueChanges
+    .debounceTime(200)
+    // 입력 필드에 입력된 값으로 getWeather() 함수를 호출하고, 날씨 정보를 받기 위해 HTTP 요청을 보냄
+    .switchMap(city => this.getWeather(city))
+    // 옵저버블 스트림을 생성하기 위해 subscribe() 함수를 호출하는데(이 예제는 200ms마다 스트림 엘리먼트 생성)
+    .subscribe(
+        res => {
+          this.temperature =
+              `Current temperature is ${res['main'].temp}℃` +
+              `humidity : ${res['main'].humidity}%`
+        },
+        // 에러 발생 시 처리
+        err => {
+          console.log(`Can't get weather. Error code : %s, URL :%s`, err.message, err.url)
+        },
+        // 스트림이 종료되었을 때 실행 할 함수
+        () => {
+          console.log(`Weather is retrieved`)
+        }
+    );
+  }
+
+  getWeather(city: string): Observable<Array<string>> {
+    // URL을 구성하고 HTTP GET 요청을 보냄
+    return this.http.get(this.baseWeatherURL + city + this.urlSuffix)
+    // 서버응답으로 받은 Response 객체를 JSON 객체로 변환
+    // Response 객체는 데이터를 문자열로 담고 있기 때문에, JSON 객체로 변환해서 처리하는 것이 편함
+    .map(res => {
+      console.log(res.json());
+      return res.json();
+    })
+    .catch(err => {
+      if (err.status === 404) {
+        console.log(`City ${city} not found`);
+        return Observable.of();
+      }
+    });
+  }
+}
+
+@NgModule({
+  // HttpModule을 사용할 수 있도록 패키지를 로드
+  imports: [BrowserModule, ReactiveFormsModule, HttpModule],
+  declarations: [AppComponent],
+  bootstrap: [AppComponent]
+})
+class AppModule {
+}
+
+platformBrowserDynamic().bootstrapModule(AppModule);
+```
+
+**두 개의 옵저버블 스트림**  
+
+- FormControl 객체는 ```<input>``` 엘리먼트에서 발생하는 이벤트를  
+옵저버블 스트림으로 생성  
+- getWeather() 함수가 반환하는 형태도 옵저버블
+
+1) switchMap() : 옵저버블을 받아 새로운 옵저버블을 반환  
+: 옵저버블 1 -> switchMap() -> 옵저버블2 -> subscribe()  
+=> subscribe() 함수는 input 엘리먼트가 생성한 옵저버블이 아니라,  
+getWeather() 함수가 반환하는 옵저버블을 받음)  
+=> 옵저버블2가 만들어지기 전에 옵저버블 1에 새로운 값이 전달되면,  
+이전에 있던 옵저버블은 폐기
+
+2) subscribe()  
+=> 첫번째 인자로 서버에서 데이터를 받았을 때, 처리할 함수를 지정
+
+---
+
+<div id="5.3"></div>
+
+## 5.3 파이프
 
 
 
@@ -181,23 +433,11 @@ platformBrowserDynamic().bootstrapModule(AppModule);
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+<br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/>
 
 
 
 
 ---
-
 
 <br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/>
