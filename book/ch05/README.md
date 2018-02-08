@@ -13,6 +13,7 @@
 - <a href="#5.1">5.1 데이터 바인딩</a>
 - <a href="#5.2">5.2 반응형 프로그래밍과 옵저버블</a>
 - <a href="#5.3">5.3 파이프</a>
+- <a href="#5.4">5.4 실습</a>
 
 
 <div id="5.1"></div>
@@ -520,6 +521,214 @@ class AppModule {
 
 platformBrowserDynamic().bootstrapModule(AppModule);
 ```
+
+---
+
+<div id="5.4"></div>
+
+## 5.4 실습  
+; 옵저버블 이벤트 스트림을 사용해 상품 필터링  
+
+e.g) 사용자가 상품 이름의 몇글자만 입력했을 때, 그 글자가 포함 된 상품만  
+보여주는 기능  
+
+### 5.4.1 FormModule 추가  
+=> @angular/forms 패키지 추가  
+```yarn add @angular/forms```  
+
+### 5.4.2 커스텀 파이프 정의  
+;app/components/pipes/filter.pipe.ts  
+
+> 필터링을 적용할 필드 이름과 문자열을 인자로 받고, 해당 문자열이 포함된  
+상품의 목록을 반환  
+
+```
+import {Pipe, PipeTransform} from "@angular/core";
+
+@Pipe({name: 'filter'})
+export class FilterPipe implements PipeTransform {
+  transform(list: any[], filterByField: string, filterValue: string): any {
+    if (!filterByField || !filterValue) {
+      return list;
+    }
+
+    return list.filter(item => {
+      const field = item[filterByField].toLowerCase();
+      const filter = filterValue.toLocaleLowerCase();
+      return field.indexOf(filter) >= 0;
+    });
+  }
+}
+```
+
+### 5.4.3 SearchComponent 수정하기  
+=> @angular/forms 패키지를 추가하면, Angular 프레임워크가 ```<form>``` 태그에  
+자동으로 폼 그룹을 적용하기 때문에, SearchComponent의 ```<form>``` 태그는 더이상 동작X  
+
+> search/search.component.html  
+
+```
+<!--
+  <form> 엘리먼트에 formModel 이라는 이름으로 폼 그룹을 적용
+  폼 그룹 formModel은 SearchComponent에서 클래스 변수로 선언
+-->
+<form [formGroup]="formModel">
+  <div class="form-group">
+    <label for="title">Product title :</label>
+    <input id="title"
+           placeholder="Title"
+           class="form-control"
+           type="text"
+           formControlName="title">
+    <!--
+      <input> 엘리먼트는 title이라는 이름으로 폼 컨트롤을 적용
+      폼 컨트롤 title은 SearchComponent의 formModel 폼 그룹 안에 있는 하위 항목
+    -->
+  </div>
+
+  <div class="form-group">
+    <label for="price">Product price :</label>
+    <input id="price"
+           placeholder="Price"
+           class="form-control"
+           type="number"
+           step="any"
+           min="0"
+           formControlName="price">
+  </div>
+
+  <div class="form-group">
+    <label for="category">Product category :</label>
+    <select id="category"
+            class="form-control"
+            formControlName="category">
+    </select>
+  </div>
+
+  <div class="form-group">
+    <button type="submit" class="btn btn-primary btn-block">Search</button>
+  </div>
+</form>
+```  
+
+> search/search.component.ts  
+
+```
+import {Component} from '@angular/core';
+import {FormControl, FormGroup} from "@angular/forms"; // 폼 모듈 로드
+
+@Component({
+  selector: 'auction-search',
+  templateUrl: 'app/components/search/search.component.html'
+})
+export default class SearchComponent {
+  // 폼 그룹 formModel을 선언
+  // 폼 컨트롤 title, price, category 선언. 이 폼 컨트롤은 모두 폼 그룹 formModel의 하위 항목
+  formModel: FormGroup = new FormGroup({
+    'title': new FormControl(),
+    'price': new FormControl(),
+    'category': new FormControl()
+  });
+}
+```
+
+### 5.4.4 HomeComponent 수정하기  
+
+> home/home.component.ts  
+
+```
+import {Component} from "@angular/core";
+import {FormControl} from "@angular/forms";
+import {Product, ProductService} from "../../services/product.service";
+import 'rxjs/add/operator/debounceTime';
+
+@Component({
+  selector: 'auction-home-page',
+  styleUrls: ['app/components/home/home.component.css'],
+  // 검색조건을 위해 input 엘리먼트 추가
+  template: `
+    <div class="row carousel-holder">
+      <div class="col-md-12">
+        <auction-carousel></auction-carousel>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-12">
+        <div class="form-group">
+          <input placeholder="Filter products by title" class="form-control" type="text"
+                 [formControl]="titleFilter">
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <!-- filter 파이프 적용 filter : 커스텀 파이프 이름 / title : 필터링 적용 할 필드 이름 / filterCriteria : 사용자가 입력 한 필터링 조건 -->
+      <div *ngFor="let product of products | filter : 'title' : filterCriteria" class="col-sm-4 col-lg-4 col-md-4">
+        <auction-product-item [product]="product"></auction-product-item>
+      </div>
+    </div>
+  `
+})
+export default class HomeComponent {
+  products: Product[] = [];
+  titleFilter: FormControl = new FormControl();
+  filterCriteria: string;
+
+  constructor(private productService: ProductService) {
+    this.products = this.productService.getProducts();
+    this.titleFilter.valueChanges
+    .debounceTime(100)
+    // <input>엘리먼트에서 발생하는 이벤트 스트림을 구독하고,
+    // 이 엘리먼트에 있는 값을 필터링 조건으로 지정
+    .subscribe(
+        value => this.filterCriteria = value,
+        error => console.error(error)
+    );
+  }
+}
+```
+
+### 5.4.5 AppModule 수정하기  
+
+=> ReactiveFormsModule 추가  (input 엘리먼트가 제대로 동작하기 위해)  
+=> FilterPipe 모듈 등록  
+
+```
+...
+import { ReactiveFormsModule} from '@angular/forms';
+...
+import { FilterPipe } from './components/pipes/filter.pipe';
+
+@NgModule({
+  imports : [BrowserModule, ReactiveFormsModule,
+    ...
+  declarations : [
+    ...,
+    FilterPipe],
+  ...
+})
+export class AppModule {}
+```
+
+---
+
+<div id="summary"></div>
+
+## 정리  
+
+- 컴포넌트의 프로퍼티를 바인딩하면 프로퍼티 값이 DOM 객체를 거쳐 화면에 표시  
+- 이벤트를 바인딩하면 화면에서 발생한 이벤트가 컴포넌트로 전달  
+- 양방향 바인딩은 [()] 표기법이나 NgModel 디렉티브를 사용  
+- NgIf와 같은 HTML 조작 디렉티브를 사용하면 브라우저 DOM 트리에 노드를 추가하거나  
+제거할 수 있음
+- 옵저버블 데이터 스트림을 사용하면 비동기 프로그래밍을 간단하게 구현  
+스트림은 원하는 시점에 구독하거나 해지할 수 있고, 데이터를 요청하기 위해 서버로 보낸  
+요청을 취소할 수도 있다.
+
+
+
+
+
+
 
 
 
