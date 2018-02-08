@@ -417,7 +417,113 @@ getWeather() 함수가 반환하는 옵저버블을 받음)
 
 <div id="5.3"></div>
 
-## 5.3 파이프
+## 5.3 파이프  
+; 어떤 값의 형태를 바꿀 때 사용하는 템플릿 엘리먼트  
+
+```
+template : `<p> Your birthday is {{ birthday | date }} </p>`
+```  
+
+> 자주 사용하는 파이프  
+
+- UpperCasePipe : 문자열을 모두 대문자로 변환  
+=> | uppercase
+- DatePipe : 날짜를 여러가지 형식으로 표시  
+=> | date
+- CurrencyPipe : 숫자를 원하는 형식의 화폐 단위로 변환  
+=> | currency  
+- JsonPipe : 문자열을 JSON 형식으로 변환  
+=> | json
+- AsyncPipe : 옵저버블 스트림을 엘리먼트로 풀어서 표시  
+=> | async
+
+> E.g) 날짜형식 변환 -> 대문자로 변환  
+
+```
+tempalte = `
+  <p> {{ birthday | date : 'medium' | uppercase}} </p>
+`
+```  
+
+[Ref : Pipe Guide 페이지](https://angular.io/guide/pipes)  
+
+### 5.3.1 커스텀 파이프  
+
+> PipeTransform 인터페이스  
+
+```
+export interface PipeTransform {
+  transform(value : any, ... args : any[] ) : any;
+}
+```  
+
+> 커스텀 파이프(pipes/temperature.pipe.ts)  
+
+```
+import {Pipe, PipeTransform} from "@angular/core";
+
+// 파이프 이름을 temperature로 지정. 컴포넌트 템플릿에서는 이 이름으로 커스텀 파이프 사용
+@Pipe({name: 'temperature'})
+export class TemperaturePipe implements PipeTransform {
+  transform(value: any, fromTo: string): any {
+    if (!fromTo) {
+      throw 'Temperature pipe requires parameter FtoC or CtoF';
+    }
+
+    return (fromTo === 'FtoC') ?
+        (value - 32) * 5.0 / 9.0 : // F to C
+        value * 9.0 / 5.0 + 32;    // C to F
+  }
+}
+```
+
+> 커스텀 파이프 테스트(pipes/pipe-tester.ts)  
+
+```
+import {platformBrowserDynamic} from "@angular/platform-browser-dynamic";
+import {NgModule, Component} from "@angular/core";
+import {BrowserModule} from "@angular/platform-browser";
+import {FormsModule} from "@angular/forms";
+import {TemperaturePipe} from "./temperature.pipe";
+
+@Component({
+  selector: 'app',
+  // temperature 파이프 + number 파이프 체이닝 (정수 한 자리 반드시 표시 & 소수점 최대 2번쨰 자리까지
+  template: `
+    <input type='text' value="0" placeholder="Enter temperature" [(ngModel)]="temp">
+    <button (click)="toggleFormat()">Toggle Format</button>
+    <br>In {{ targetFormat }} this temperature is {{ temp | temperature: format | number:'1.1-2'}}
+  `
+})
+class AppComponent {
+  temp: number = 0;
+  toCelsius: boolean = false;
+  targetFormat: string = 'Fahrenheit';
+  format: string = 'CtoF';
+
+  toggleFormat() {
+    this.toCelsius = !this.toCelsius;
+    this.format = this.toCelsius ? 'FtoC' : 'CtoF';
+    this.targetFormat = this.toCelsius ? 'Celsius' : 'Fahrenheit';
+  }
+}
+
+@NgModule({
+  // ngModel을 사용하기 위해 FormsModule을 사용
+  imports: [BrowserModule, FormsModule],
+  // 커스텀 파이프를 모듈 선언에 추가
+  declarations: [AppComponent, TemperaturePipe],
+  bootstrap: [AppComponent]
+})
+class AppModule {
+}
+
+platformBrowserDynamic().bootstrapModule(AppModule);
+```
+
+
+
+
 
 
 
