@@ -10,7 +10,10 @@
 
 ## Index
 
-- <a href="#6.1">컴포넌트끼리 통신하기</a>
+- <a href="#6.1">6.1 컴포넌트끼리 통신하기</a>
+- <a href="#6.2">6.2 컴포넌트 생명주기  </a>
+
+- <a href="#"></a>
 
 <div id="6.1"></div>
 
@@ -215,6 +218,341 @@ platformBrowserDynamic().bootstrapModule(AppModule);
 => AppComponent의 이벤트 핸들러는 IPriceQuote 타입의 이벤트 객체를 인자로 받아  
 stockSymbol과 lastPrice의 값을 가져오는데, 이 값들은 컴포넌트 클래스 변수에 할당되어  
 템플릿에 표시
+
+### 6.1.2 중개자 패턴  
+;각 컴포넌트는 서로 독립적이고 다른 컴포넌트를 최대한 신경쓰지 않는 것이 좋음  
+=> 컴포넌트의 결합도를 낮게 유지하면서 서로 데이터를 주고 받으려면,  
+중개자 패턴(The Mediator pattern)을 사용하는 것이 좋음  
+https://en.wikipedia.org/wiki/Mediator_pattern
+
+![중개자가데이터전송하는과정](./pics/[6-2]중개자_데이터_전달과정.png)  
+
+> Example (app/mediator)  
+
+- stock.ts : 전달하는 데이터의 형식을 정의하는 인터페이스  
+  - PriceQuoterComponent에서 이벤트를 보낼때 사용
+  - OrderComponent에서 데이터를 받을 때 사용
+- price-quoter.component.ts : PriceQuoterComponent를 정의
+- order.component.ts : OrderComponent 정의  
+- mediator-main.ts : 애플리케이션 실행 코드 작성  
+
+> stock.ts  
+```
+export interface Stock {
+  stockSymbol: string;
+  bidPrice: number;
+}
+```  
+=> TS 파일을 브라우저에서 바로 사용하기 위해 SystemJS를 사용  
+=> ES5문법에는 인터페이스가 존재하지 않아, stock.ts -> stock.js 변환과정에서  
+빈 파일이 생성 됨  
+=> SystemJS가 Stock을 ES6 모듈로 인식하기 위해 systemjs.config.js 변경  
+```
+meta: {
+    'app/mediator/stock.ts': {
+      format: 'es6'
+    }
+  },
+packages: { ... }
+```  
+
+> mediator-main.ts  
+
+```
+import {platformBrowserDynamic} from "@angular/platform-browser-dynamic";
+import {NgModule, Component} from "@angular/core";
+import {BrowserModule} from "@angular/platform-browser";
+
+import {PriceQuoterComponent} from "./price-quoter.component";
+import {OrderComponent} from "./order.component";
+import {Stock} from './stock';
+
+@Component({
+  selector: 'app',
+  template: `
+    <price-quoter (buy)="priceQuoteHandler($event)"></price-quoter>
+    <br/>
+    <order-processor [stock]="stock"></order-processor>
+  `
+})
+class AppComponent {
+  stock: Stock;
+
+  priceQuoteHandler(event: Stock) {
+    this.stock = event;
+  }
+}
+
+@NgModule({
+  imports: [BrowserModule],
+  declarations: [
+    AppComponent,
+    OrderComponent,
+    PriceQuoterComponent
+  ],
+  bootstrap: [AppComponent]
+})
+class AppModule {
+}
+
+platformBrowserDynamic().bootstrapModule(AppModule);
+```  
+
+> price-quoter.component.ts  
+
+```
+import {Component, Output, Directive, EventEmitter} from "@angular/core";
+import {Stock} from './stock';
+
+@Component({
+  selector: 'price-quoter',
+  template: `
+    <strong><input type="button" value="Buy" (click)="buyStocks($event)">
+      {{ stockSymbol }} {{ lastPrice | currency: 'USD' : true : '1.2-2' }} </strong>
+  `,
+  styles: [`:host {
+    background: pink;
+    padding: 5px 15px 15px 15px;
+  }`]
+})
+export class PriceQuoterComponent {
+  @Output() buy: EventEmitter<Stock> = new EventEmitter<Stock>();
+
+  stockSymbol: string = 'IBM';
+  lastPrice: number;
+
+  constructor() {
+    setInterval(() => {
+      this.lastPrice = 100 * Math.random();
+    }, 2000);
+  }
+
+  buyStocks(): void {
+    let stockToBuy: Stock = {
+      stockSymbol: this.stockSymbol,
+      bidPrice: this.lastPrice
+    };
+
+    this.buy.emit(stockToBuy);
+  }
+}
+```
+
+> order.component.ts  
+```
+import {Component, Input} from "@angular/core";
+import {Stock} from './stock';
+
+@Component({
+  selector: 'order-processor',
+  template: `{{ message }}`,
+  styles: [`:host {
+    background: cyan;
+  }`]
+})
+export class OrderComponent {
+  message: string = 'Waiting for the orders..';
+
+  private _stock: Stock;
+
+  @Input() set stock(value: Stock) {
+    if (value && value.bidPrice != undefined) {
+      this.message = `Placed order to buy 100 shares of ${value.stockSymbol} at \$${value.bidPrice.toFixed(2)}`;
+    }
+  }
+
+  get stock(): Stock {
+    return this._stock;
+  }
+}
+```
+
+=> 서로 이웃 한 컴포넌트가 부모를 중개자로 사용하는 방법의 예제  
+=> 부모가 다르거나, 컴포넌트들이 한 화면에 표시 되는 상황이 아니면 ?  
+=> 서비스를 중개자로 사용  
+
+
+### 6.1.3 프로젝션  
+; Angular는 부모 컴포넌트 템플릿의 일부분을 자식 컴포넌트 템플릿에 넣을 수 있는  
+기능을 제공하며, ngContent 디렉티브를 사용  
+(트랜스클루전(transclusion)=>프로젝션(projection)으로 용어 변경)  
+=> 부모 컴포넌트에서 템플릿을 정의하지만, 자식 컴포넌트에서 렌더링 됨  
+
+1. 자식 컴포넌트 템플릿에 ```<ng-content>``` 태그를 추가해 부모 컴포넌트가 보내는  
+템플릿이 위치할 곳을 지정. 라우터를 사용할 때 ```<router-outlet>```을 사용하는 것과 비슷  
+
+2. 부모 컴포넌트에서 자식 컴포넌트 태그 안쪽에 원하는 내용을 넣음  
+자식 컴포넌트를 표현하는 태그가 ```<my-child>```라면 태그 안쪽에있는 내용이 전달  
+```
+template : `
+  ...
+  <my-child>
+    <div> Passing this div to the childe </div>
+  </my-child>
+  ...
+`
+```  
+
+> Example  app/projection  
+
+> basic-ng-content.ts  
+
+```
+import {platformBrowserDynamic} from "@angular/platform-browser-dynamic";
+import {NgModule, Component, ViewEncapsulation} from "@angular/core";
+import {BrowserModule} from "@angular/platform-browser";
+
+@Component({
+  selector: 'child',
+  styles: ['.wrapper {background: lightgreen;}'],
+  // 부모 컴포넌트에서 전달하는 템플릿은 <ng-content>에 표시
+  template: `
+    <div class="wrapper">
+      <h2>Child</h2>
+      <div>This div is defined in the child's template</div>
+      <ng-content></ng-content>
+    </div>
+  `,
+  encapsulation: ViewEncapsulation.Native
+})
+class ChildComponent {
+}
+
+@Component({
+  selector: 'app',
+  styles: ['.wrapper {background: cyan;}'],
+  // <child> 태그 안 내용은 AppComponent에서 렌더링하지 않고, ChildComponent로 전달
+  template: `
+    <div class="wrapper">
+      <h2>Parent</h2>
+      <div>This div is defined in the Parent's template</div>
+      <child>
+        <div>Parent projects this div onto the childe</div>
+      </child>
+    </div>
+  `,
+  encapsulation: ViewEncapsulation.Native
+})
+class AppComponent {
+}
+
+@NgModule({
+  imports: [BrowserModule],
+  declarations: [AppComponent, ChildComponent],
+  bootstrap: [AppComponent]
+})
+class AppModule {
+}
+
+platformBrowserDynamic().bootstrapModule(AppModule);
+```  
+
+![basic-ng-content실행](./pics/[6-3]basic-ng-content실행화면.png)  
+
+=> AppComponent와 ChildComponent는 각각 Shadow DOM을 만들고, AppComponent에서  
+전달하는 템플릿은 ChildComponent 안에 렌더링 됨  
+=> #shadow-root는 부모 컴포넌트와 분리된 DOM을 생성하기 때문에  
+각 wrapper 클래스의 스타일이 다르게 적용 됨  
+
+> ViewEncapsulation.Emulated로 실행  
+
+![ViewEncapsulation_Emulated](./pics/[6-4]ViewEncapsulation_Emulated.png)  
+
+=> #shadow-root가 사용되지 않고, 캡슐화를 구현하기 위해 DOM 객체에 어트리뷰트를  
+추가로 생성하지만, 화면은 여전히 같은 모습으로 렌더링  
+
+> ViewEncapsulation.None으로 실행
+
+![ViewEncapsulation_None](./pics/[6-5]ViewEncapsulation_None.png)  
+
+=> 부모 컴포넌트와 자식 컴포넌트가 일반 DOM 노드로 구성되어 있고, 스타일도  
+캡슐화 되지 않아 자식 컴포넌트에서 지정한 .wrapper 스타일은 부모의 스타일에 가려짐  
+
+**여러 구역에 프로젝션 하기**  
+; header(부모), contents(자식), footer(자식)로 나뉘어 진 경우  
+=> select 어트리뷰트로 구별 가능
+
+```
+<ng-content select=".header"></ng-content>
+<div> This content is defined in child </div>
+<ng-content select=".footer"></ng-content>
+```  
+
+> Eg) app/projection/ng-content-selector.ts  
+
+```
+import {platformBrowserDynamic} from "@angular/platform-browser-dynamic";
+import {NgModule, Component} from "@angular/core";
+import {BrowserModule} from "@angular/platform-browser";
+
+@Component({
+  selector: 'child',
+  styles: ['.child {background: lightgreen;}'],
+  template: `
+    <div class="child">
+      <h2>Child</h2>
+      <ng-content select=".header"></ng-content>
+      <div>This content is defined in child</div>
+      <ng-content select=".footer"></ng-content>
+    </div>
+  `
+})
+class ChildComponent {
+}
+
+@Component({
+  selector: 'app',
+  styles: ['.app {background: cyan;}'],
+  template: `
+    <div class="app">
+      <h2>Parent</h2>
+      <div>This div is defined in the Parent's template</div>
+      <child>
+        <div class="header">Child got this header from parent {{ todaysDate }}</div>
+        <div class="footer">Child got this footer from parent</div>
+      </child>
+    </div>
+  `
+})
+class AppComponent {
+  todaysDate: string = new Date().toLocaleDateString();
+}
+
+@NgModule({
+  imports: [BrowserModule],
+  declarations: [AppComponent, ChildComponent],
+  bootstrap: [AppComponent]
+})
+class AppModule {
+}
+
+platformBrowserDynamic().bootstrapModule(AppModule);
+```
+
+**note:innerHTML로 직접바인딩하기**  
+```
+<p [innerHTML]="myComponentProperty"></p>
+```  
+
+innerHTML보다 ngContent를 사용하는 이유?
+- innerHTML은 브라우저에 따라 동작하지 않을 수 있음(ngContent는 Angular에서 제공하는 기능)  
+- ngContent를 사용하면 여러 구역에 나뉘어 전달된 HTML을 한 번에 지정할 수 있음  
+- ngContent를 사용하면 부모 컴포넌트의 프로퍼티를 HTML에 실어 전달할 수 있음
+
+---
+
+<div id="6.2"></div>
+
+## 6.2 컴포넌트 생명주기  
+
+
+
+
+
+
+
+
+
 
 
 

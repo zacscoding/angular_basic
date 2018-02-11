@@ -12,6 +12,12 @@ System.config({
     'rxjs': 'node_modules/rxjs'
   },
 
+  meta: {
+    'app/mediator/stock.ts': {
+      format: 'es6'
+    }
+  },
+
   packages: {
     'rxjs': {main: 'Rx'},
     '@angular/core': {main: 'bundles/core.umd.min.js'},
@@ -23,7 +29,10 @@ System.config({
     '@angular/platform-browser-dynamic': {main: 'bundles/platform-browser-dynamic.umd.min.js'},
     //'app': {main: 'input_output/input-property-binding-getter-setter',defaultExtension: 'ts'}
     'app': {
-      main: 'input_output/output-property-binding',
+      // main: 'input_output/output-property-binding',
+      // main: 'mediator/mediator-main',
+      // main: 'projection/basic-ng-content',
+      main: 'projection/ng-content-selector',
       defaultExtension: 'ts'
     }
   }
