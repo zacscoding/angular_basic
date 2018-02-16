@@ -32,7 +32,9 @@ System.config({
       // main: 'input_output/output-property-binding',
       // main: 'mediator/mediator-main',
       // main: 'projection/basic-ng-content',
-      main: 'projection/ng-content-selector',
+      // main: 'projection/ng-content-selector',
+      // main: 'comp_lifecycle/on-changes-with-param',
+      main: 'child_api/exposing-child-api',
       defaultExtension: 'ts'
     }
   }

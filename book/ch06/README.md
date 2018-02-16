@@ -11,7 +11,10 @@
 ## Index
 
 - <a href="#6.1">6.1 컴포넌트끼리 통신하기</a>
-- <a href="#6.2">6.2 컴포넌트 생명주기  </a>
+- <a href="#6.2">6.2 컴포넌트 생명주기</a>
+- <a href="#6.3">6.3 변화 감지기 동작 원리</a>
+- <a href="#6.4">6.4 자식 컴포넌트의 API 직접 실행하기</a>
+- <a href="#6.5">6.5 실습 : 별점 기능 추가하기</a>
 
 - <a href="#"></a>
 
@@ -544,6 +547,271 @@ innerHTML보다 ngContent를 사용하는 이유?
 <div id="6.2"></div>
 
 ## 6.2 컴포넌트 생명주기  
+-> 컴포넌트가 생성되면 Angular 변화 감지기가 컴포넌트를 모니터링  
+-> 컴포넌트 초기화 -> DOM에 추가 -> 사용자가 볼 수 있게 렌더링  
+-> 컴포넌트의 상태나 내부의 프로퍼티 값이 변경되면 UI를 다시 렌더링  
+
+> 컴포넌트 생명 주기  
+
+- 진한 회색 : 한번만 실행 / 그 외 : 여러번 실행
+
+![컴포넌트 생명주기](./pics/[6-7]component_life_cycle.png)  
+
+=> 컴포넌트의 초기화 이후 화면에서 컴포넌트 볼 수 있음  
+=> 컴포넌트의 프로퍼티 값과 화면의 값이 변화 감지기에 의해 동기화된 상태로 유지  
+=> 라우터에서 화면을 전환하거나 ngIf와 같은 구조 디렉티브에 의해 컴포넌트가  
+DOM 트리에서 제거되면 컴포넌트가 종료  
+
+- ngOnChanges() : 부모 컴포넌트에서 자식 컴포넌트의 입력 프로퍼티로 바인딩 된 값이  
+변경되거나 프로퍼티 값이 초기화 될 때 실행되고, 컴포넌트에 입력 프로퍼티가 없으면 실행 X  
+- ngOnInit() : 프로퍼티 값을 초기화하려고 ngOnChanges()가 처음 실행된 뒤에 실행된다.  
+컴포넌트 생성자 함수에서 변수들을 초기화한다고 해도, 생성자 함수가 실행되는 시점에는  
+컴포넌트 프로퍼티들이 아직 생성되지 않지만, ngOnInit()이 실행되는 시점은 컴포넌트  
+프로퍼티들이 생성되어 초기화되고 난 이후  
+- ngAfterContentInit() : ngContent 디렉티브를 사용해서 자식 컴포넌트에 HTML 조각을 전달하면  
+자식 컴포넌트가 초기화 된 이후에 실행된다.  
+- ngAfterContentChecked() : ngContent 디렉티브를 통해 부모 컴포넌트에서 HTML 조각을 받은  
+직후에 자식 컴포넌트 쪽에서 실행된다. ngContent에 바인딩된 항목이 있으면 이 항목의 값이  
+변경 된 경우에도 실행된다.  
+- ngAfterViewInit() : 컴포넌트 템플릿의 바인딩이 완료된 후에 실행된다. 부모 컴포넌트가  
+먼저 초기화되고 그 다음 자식 컴포넌트가 초기화 되기 때문에, 이 함수는 자식 컴포넌트 들이  
+모두 준비된 후에 실행된다.  
+- ngAfterViewChecked() : 컴포넌트 템플릿에 바인딩 된 항목의 값이 변경되면 실행된다.  
+이 함수는 컴포넌트 내부나 외부에서 발생 한 변경 사항을 반영하기 위해 여러번 호출 될 수 있다.  
+
+=> 생명주기 콜백 함수 일므에 Content가 들어간 항목은 ```<ng-content>``` 디렉티브를 사용하는 경우에만  
+실행되며, 함수 이름에 View가 들어간 항목은 컴포넌트 템플릿과 관련된 것.  
+Checked는 컴포넌트와 DOM 이 동기화된 직후를 뜻함  
+
+=> 생명주기 함수들은 ng라는 접두사를 생략한 함수명과 같은 이름의 인터페이스로 정의  
+e.g : ngOnChanges() 콜백함수를 사용하려면 implements OnChanges 를 추가
+
+[ref : 생명주기 가로채기](https://angular.io/guide/lifecycle-hooks)  
+
+### 6.2.1 ngOnChanges() 함수 사용하기  
+
+e.g : 부모-자식 컴포넌트로 구성되고, 자식 컴포넌트에는 greeting과 user의 입력 프로퍼티  
+존재 (greeting은 문자열, user는 name 프로퍼티가 있는 객체 타입)  
+
+
+**뮤터블vs이뮤터블**  
+
+```
+var greeting = 'Hello';
+greeting = 'Hello Mary';
+```  
+
+=> "Hello" 문자열 생성 & "Heelo Mary" 문자열 생성 + greeting 참조 값 변경  
+=> 두 문자열 모두 메모리에 있고 각각은 이뮤터블  
+
+```
+var user = {name : 'John'};
+user.name='Mary';
+```  
+=> 메모리에 객체 생성 + user변수는 객체를 참조 & 'John'문자열 메모리에 생성 + user.name이 참조  
+=> user.name은 새로운 문자열 'Mary'를 참조 BUT user는 같은 객체를 참조  
+
+> app/comp_lifecycle/on-changes-with-param.ts  
+
+```
+import {platformBrowserDynamic} from "@angular/platform-browser-dynamic";
+import {NgModule, Component, Input, OnChanges, SimpleChange, enableProdMode} from "@angular/core";
+
+import {BrowserModule} from "@angular/platform-browser";
+import {FormsModule} from "@angular/forms";
+
+// 값을 저장 할 객체의 형식을 정의. 이 인터페이스는 ngOnChanges() 에서 사용하고
+// 객체의 키는 문자열 타입을 사용하며, 값의 변화를 확인하기 위해 Angular에서 제공하는 SimpleChange 클래스를 사용
+interface IChanges {
+  [key: string]: SimpleChange
+};
+
+@Component({
+  selector: 'child',
+  styles: ['.child {background: lightgreen;}'],
+  template: `
+    <div class="child">
+      <h2>Child</h2>
+      <div>Greeting : {{greeting}}</div>
+      <div>User name : {{user.name}}</div>
+      <div>Message : <input [(ngModel)]="message"></div>
+    </div>
+  `
+})
+class ChildComponent implements OnChanges {
+  // AppComponent에서 데이터를 받기 위해 입력 프로퍼티 지정
+  @Input() greeting: string;
+  @Input() user: { name: string };
+  // @Input 어노테이션 지정X => 값이 변경되어 ngOnChanges() 함수는 실행X
+  message: string = 'Initial message';
+
+  // 입력 프로퍼티의 값이 변경되면 사용
+  ngOnChanges(changes: IChanges) {
+    console.log(JSON.stringify(changes, null, 2));
+  }
+}
+
+@Component({
+  selector: 'app',
+  styles: ['.parent{background: lightblue;}'],
+  template: `
+    <div class="parent">
+      <h2>Parent</h2>
+      <div>Greeting : <input type="text" [value]="greeting" (input)="greeting=$event.target.value"></div>
+      <div>User name : <input type="text" [value]="user.name" (input)="user.name=$event.target.value"></div>
+      <child [greeting]="greeting" [user]="user"></child>
+    </div>
+  `
+})
+class AppComponent {
+  greeting: string = "Hello";
+  user: { name: string } = {name: 'John'};
+}
+
+// Angular 운영모드 활성화
+enableProdMode();
+
+@NgModule({
+  imports: [BrowserModule, FormsModule],
+  declarations: [AppComponent, ChildComponent],
+  bootstrap: [AppComponent]
+})
+class AppModule {
+}
+
+platformBrowserDynamic().bootstrapModule(AppModule);
+```  
+
+=> 입력 프로퍼티로 바인딩 된 값이 변경되면 ngOnChanges() 함수가 실행 + SimpleChange 객체 전달  
+1) greeting 필드 값 변경 => Angular의 변화 감지기가 동작해서 자식 컴포넌트의 이뮤터블 입력 프로퍼티를  
+갱싢다고 ngChanges() 콜백 함수를 실행시키며 변경되기 전 값과 변경 된 값이 콘솔에 출력  
+2) User name 필드 값 변경 => 뮤터블 객체인 user안에 있는 name 프로퍼티가 변경된 것이지 자식 컴포넌트  
+에 바인딩 된 user 객체가 변경된 것은 아니기 때문에 ngOnChanges()는 실행X  
+3) message 필드 값 변경 => @input 어노테이션으로 지정하지 않아서 ngOnChanges() 실행X  
+
+---
+
+<div id="6.3"></div>  
+
+## 6.3 변화 감지기 동작 원리  
+; Angular 변화 감지기는 Zone(zone.js) 라이브러리를 사용해서 구현되었으며, 컴포넌트 프로퍼티의 값과  
+UI의 상태를 동기화하기 위해 만들어짐  
+
+**변화감지정책**  
+- Default : 컴포넌트 트리 전체를 돌면서 컴포넌트가 변경되었는지 검사  
+- OnPush : 자식 컴포넌트부터 그 아래 계층은 컴포넌트가 변경되었는 지 검사X  
+``` changeDetection : ChangeDetectionStrategy.OnPush```  
+
+![변화감지정책](./pics/[6-14]변화감지정책.png)  
+
+- Default : 변화감지기는 최상위 부모 컴포넌트부터 시작해 모든 자손을 검사  
+- OnPush : 자식 컴포넌트에 바인딩된 프로퍼티가 변경되지 않는 한, 변화 감지기는  
+부모 컴포넌트에서 멈춘다.  
+
+![변화감지대상에서 일부컴포넌트 제외하기](./pics/[6-15]변화감지대상에서_일부컴포넌트_제외하기.png)  
+
+=> GrandChild1 컴포넌트에서 이벤트 발생  
+=> 최상위 컴포넌트(Parent)부터 시작해서 OnPush 정책이 아닌 모든 컴포넌트를 순회(회색으로 표시 된 컴포넌트)    
+=> Child2, GrandChild2는 Child2 컴포넌트에 바인딩된 입력 프로퍼티 값이 바뀌지 않는 이상 변화 감지기의 대상에서  
+제외  
+
+[ref : Angular 변화 감지 방식](http://mng.bz/bD6v)  
+
+---
+
+<div id="6.4"></div>
+
+## 6.4 자식 컴포넌트의 API 직접 실행하기
+
+> Example  
+
+자식 컴포넌트에 greeting() 함수가 있고 부모 컴포넌트에서 이 함수를 실행  
+(2가지 방법을 살펴보기 위해 자식 컴포넌트는 두 개의 인스턴스로 만들고 각 인스턴스에  
+템플릿 변수를 지정)
+
+```
+<child #child1></child>
+<child #child2></child>
+```  
+
+```
+// @ViewChild는 자식 컴포넌트를 가리키기 위해 사용  
+@ViewChild('child1')
+firstChild : ChildComponent;
+...
+this.firstChild.greeting('Child 1');
+// 자식 컴포넌트 중에 child1이라는 템플릿 변수를 갖는 컴포넌트를 찾아 firstChild라는 변수에 할당  
+// 자식 컴포넌트의 함수를 직접 실행  
+```  
+
+```
+<button (click)="child2.greet('Child2')">자식2에서 greeting() 실행</button>
+// 컴포넌트 코드를 사용하지 않고, 부모 컴포넌트의 템플릿에서 접근하는 방법  
+```  
+
+> app/child_api/exposing-child-api.ts  
+
+```
+import {platformBrowserDynamic} from "@angular/platform-browser-dynamic";
+import {NgModule, Component, ViewChild, AfterViewInit} from "@angular/core";
+import {BrowserModule} from "@angular/platform-browser";
+
+@Component({
+  selector: 'child',
+  template: `<h3>Child</h3>`
+})
+class ChildComponent {
+  greet(name) {
+    console.log(`Hello from ${name}.`);
+  }
+}
+
+@Component({
+  selector: 'app',
+  template: `
+    <h1>Parent</h1>
+    <child #child1></child>
+    <child #child2></child>
+    <button (click)="child2.greet('Child2')">Invoke get() on child 2</button>
+  `
+})
+class AppComponent implements AfterViewInit {
+  @ViewChild('child1')
+  firstChild: ChildComponent;
+
+  ngAfterViewInit() {
+    this.firstChild.greet('Child1');
+  }
+}
+
+@NgModule({
+  imports: [BrowserModule],
+  declarations: [AppComponent, ChildComponent],
+  bootstrap: [AppComponent]
+})
+class AppModule {
+}
+
+platformBrowserDynamic().bootstrapModule(AppModule);
+```  
+
+**생명주기를 가로채는 함수에서 UI 갱신하기**  
+; 자식 컴포넌트의 greet() 함수에서 ngAfterInit()함수가 실행되기 전에 화면을 변경하면  
+에러 발생 => 부모 컴포넌트의 ngAfterViewInit() 함수와 자식의 ngAfterViewInit()함수는  
+같은 이벤트 루프 안에서 실행되는데, ngAfterInit()함수가 끝난 이후에야 화면이 렌더링 되므로  
+
+1) Angular가 바인딩 검사를 추가로 하지 않는 운영모드에서 애플리케이션 실행  
+2) setTimeout() 함수를 사용해서 다음 이벤트 루프에서 화면을 갱신  
+
+---  
+
+<div id="6.5"></div>
+
+## 6.5 실습 : 별점 기능 추가하기
+
+
+
+
 
 
 
