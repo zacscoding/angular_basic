@@ -15,8 +15,7 @@
 - <a href="#6.3">6.3 변화 감지기 동작 원리</a>
 - <a href="#6.4">6.4 자식 컴포넌트의 API 직접 실행하기</a>
 - <a href="#6.5">6.5 실습 : 별점 기능 추가하기</a>
-
-- <a href="#"></a>
+- <a href="#6.6">6.6 정리</a>
 
 <div id="6.1"></div>
 
@@ -807,9 +806,228 @@ platformBrowserDynamic().bootstrapModule(AppModule);
 
 <div id="6.5"></div>
 
-## 6.5 실습 : 별점 기능 추가하기
+## 6.5 실습 : 별점 기능 추가하기  
+
+> tsconfig.json  
+
+```
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "module": "commonjs",
+    "target": "es2015",
+    "noEmit": true
+  }
+}
+```
+
+### 6.5.1 StartsComponent 클래스 수정하기  
+; ProductService에서 받은 별점을 표시하기만 하는 모드와 새로운 별점을 매길 수 있는 모드를 구분  
+
+> stars.component.ts  
+
+```
+import {Component, EventEmitter, Input, Output} from '@angular/core';
+
+@Component({
+  selector: 'auction-stars',
+  styles: [' .starrating { color: #d17581; }'],
+  templateUrl: 'app/components/stars/stars.component.html'
+})
+export default class StarsComponent {
+  private _rating: number;
+  private stars: boolean[];
+
+  private maxStarts: number = 5;
+
+  // Leave a Review 버튼 클릭 시 false로 변경
+  @Input()
+  readonly: boolean = true;
+
+  @Input()
+  get rating(): number {
+    return this._rating;
+  }
+
+  // 서비스에서 받은 데이터로 별점을 렌더링할 때 실행되거나  
+  // 사용자가 별점을 클릭했을 때 부모 컴포넌트에서 실행
+  set rating(value: number) {
+    this._rating = value || 0;
+    this.stars = Array(this.maxStarts).fill(true, 0, this.rating);
+  }
+
+  // 별점이 변경되면 이벤트를 부모 컴포넌트로 보냄
+  @Output()
+  ratingChange: EventEmitter<number> = new EventEmitter<number>();
+
+  fillStarsWithColor(index) {
+    if (!this.readonly) {
+      if (this.rating > index) {
+        this.rating = index;
+      } else {
+        this.rating = index + 1;
+      }      
+      this.ratingChange.emit(this.rating);
+    }
+  }
+}
+```
+
+### 6.5.2. StatsComponent 템플릿 수정하기  
+
+> starts.component.html  
+
+```
+<p>
+  <!-- 별점 클릭 시 fillStarsWithColor(i) 실행 -->
+  <span *ngFor="let star of stars; let i = index"
+        class="starrating glyphicon glyphicon-star"
+        [class.glyphicon-star-empty]="!star"
+        (click)="fillStarsWithColor(i)">
+  </span>
+  <span>{{rating | number:'.0-2'}} stars</span>
+</p>
+```  
+
+### 6.5.3 ProductDetailComponent 템플릿 수정하기  
+
+> product-detail.component.html  
+
+```
+<div class="thumbnail">
+  <img src="http://placehold.it/820x320">
+  <div>
+    <h4 class="pull-right">{{ product.price }}</h4>
+    <h4>{{ product.title }}</h4>
+    <p>{{ product.description }}</p>
+  </div>
+  <div class="ratings">
+    <p class="pull-right">{{ reviews.length }} reviews</p>
+    <p>
+      <auction-stars [rating]="product.rating"></auction-stars>
+    </p>
+  </div>
+</div>
+<div class="well" id="reviews-anchor">
+  <div class="row">
+    <div class="col-md-12"></div>
+  </div>
+  <div class="text-right">
+    <!-- 리뷰 등록 버튼 -->
+    <button (click)="isReviewHidden=!isReviewHidden" class="btn btn-success btn-green">Leave a Review</button>
+  </div>
+  <!--
+    리뷰 등록 div
+    [(rating)], [(ngModel)]은 양방향 데이터 바인딩
+  -->  
+  <div [hidden]="isReviewHidden">
+    <div>
+      <auction-stars [(rating)]="newRating" [readonly]="false" class="large"></auction-stars>
+    </div>
+    <div>
+      <textarea [(ngModel)]="newComment"></textarea>
+    </div>
+    <div>
+      <button (click)="addReview()" class="btn">Add review</button>
+    </div>
+  </div>
+
+  <div class="row" *ngFor="let review of reviews">
+    <hr>
+    <div class="col-md-12">
+      <auction-stars [rating]="review.rating"></auction-stars>
+      <span>{{ review.user }}</span>
+      <span class="pull-right">{{ review.timestamp | date : 'shortDate' }}</span>
+      <p>{{ review.comment }}</p>
+    </div>
+  </div>
+</div>
+```  
+
+### 6.5.4 ProductDetailComponent 클래스 코드 수정하기  
+
+> product-detail.component.ts  
+
+```
+import {Component} from '@angular/core';
+import {ActivatedRoute} from '@angular/router';
+import {Product, Review, ProductService} from '../../services/product.service';
+
+@Component({
+  selector: 'auction-product-page',
+  templateUrl: 'app/components/product-detail/product-detail.component.html'
+})
+export default class ProductDetailComponent {
+  product: Product;
+  reviews: Review[];
+
+  newComment: string;
+  newRating: number;
+
+  isReviewHidden: boolean = true;
 
 
+  constructor(route: ActivatedRoute, productService: ProductService) {
+    let prodId: number = parseInt(route.snapshot.params['productId']);
+    this.product = productService.getProductById(prodId);
+    this.reviews = productService.getReviewsForProduct(this.product.id);
+  }
+
+  addReview() {
+    let review = new Review(0, this.product.id, new Date(), 'Anonymous', this.newRating, this.newComment);
+    console.log('Adding review' + JSON.stringify(review));
+
+    // 전개 연산자
+    this.reviews = [...this.reviews, review];
+    this.product.rating = this.averageRating(this.reviews);
+
+    this.resetForm();
+  }
+
+  averageRating(reviews: Review[]) {
+    let sum = reviews.reduce((average, review) => average + review.rating, 0);
+    return sum / reviews.length;
+  }
+
+  resetForm() {
+    this.newRating = 0;
+    this.newComment = null;
+    this.isReviewHidden = true;
+  }
+}
+```  
+
+### 6.5.5 AppModule 수정하기  
+; FormsModule 추가  
+
+> app.module.ts  
+
+```
+...
+import {FormsModule, ReactiveFormsModule} from '@angular/forms';
+...
+
+@NgModule({
+  imports: [BrowserModule, FormsModule, ReactiveFormsModule,
+  ...
+```
+
+![6.5 실습_별점](./pics/[6-16]실습.png)
+
+---
+
+<div id="6.6"></div>
+
+## 6.6 정리
+
+- 부모 컴포넌트와 자식 컴포넌트는 직접 연결하는 것을 피하고 입력 프로퍼티와 출력 프로퍼티로  
+데이터를 주고 받아야 한다.
+- 컴포넌트는 출력 프로퍼티를 통해 이벤트를 발생시킬 수 있고, 이벤트를 받는 컴포넌트는  
+전달된 이벤트 객체에 담긴 정보를 활용할 수 있다.  
+- 부모 자식 관계가 아닌 컴포넌트끼리는 중개자 디자인 패턴을 사용해서 데이터를 주고 받을 수 있다.
+- 부모 컴포넌트는 자식 컴포넌트가 실행되는 시점에 템플릿 조각을 전달할 수 있다.
+- 컴포넌트의 생명주기를 가로채서 원하는 동작을 할 수 있다.
+- 컴포넌트 변화 감지 정책을 OnPush로 지정하면, 변화 감지기의 대상에서 이 컴포넌트를 제외할 수 있다.
 
 
 
