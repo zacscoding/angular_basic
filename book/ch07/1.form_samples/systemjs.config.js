@@ -21,6 +21,9 @@ System.config({
 		'@angular/platform-browser' : { main : 'bundles/platform-browser.umd.min.js' },
 		'@angular/platform-browser-dynamic' : { main : 'bundles/platform-browser-dynamic.umd.min.js' },
 
-		'app' : { main : '01_template-driven', defaultExtension : 'ts' }
+		//'app' : { main : '01_template-driven', defaultExtension : 'ts' }
+    // 'app' : { main : '02_growable-items-form', defaultExtension : 'ts' }
+    // 'app' : { main : '03_reactive', defaultExtension : 'ts' }
+    'app' : { main : '04_form-builder', defaultExtension : 'ts' }
 	}
 });
