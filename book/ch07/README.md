@@ -18,8 +18,7 @@
 - <a href="#7.2">7.2 템플릿 기반 폼</a>
 - <a href="#7.3">7.3 반응형 폼</a>
 - <a href="#7.4">7.4 폼 유효성 검사</a>
-
-
+- <a href="#7.5">7.5 실습 : 검색 폼에 유효성 검사 추가하기  </a>
 
 ---  
 
@@ -551,6 +550,418 @@ constructor(fb: FormBuilder) {
 <div id="7.4"></div>
 
 ## 7.4 폼 유효성 검사
+;폼 API를 사용하면 유효성을 검사하는 로직을 구현할 때 좀 더 편함  
+
+### 7.4.1 반응형 폼 유효성 검사  
+
+```
+interface ValidatorFn {
+  (c : AbstractControl) : { [key : string] : any}
+}
+```  
+
+=> { [key : string] : any }라는 오브젝트 리터럴을 사용해서 반환 형식을 정의  
+유효성 검사기에서 반환하는 객체의 프로퍼티는 문자열로 제한하며 이 프로퍼티에 할당되는  
+값은 어떤 것이든 허용  
+=> AbstractControl는 FormControl, FormGroup, FormArray 클래스의 상위 클래스이므로  
+폼 모델을 구성하는 모든 클래스에 대응할 수 있음  
+
+=> Angular 프레임워크는 required, minLength, maxLength, pattern과 같이 이미  
+정의되어 있는 유효성 검사기도 제공  
+
+```
+import {FormControl, Valiators} from '@angular/forms';
+// 첫번쨰 인자는 초기 값, 두번쨰 인자는 유효성 검사기  
+let usernameControl = new FormControl('', Validators.required);
+// 배열을 사용해서 여러 개를 동시에 전달
+let usernameControl = new FormControl('', [Validators.required, Valiators.minLength(5)]);
+// 값이 입력되고 유효성 검사를 통과하면 폼 컨트롤의 valid 프로퍼티가 true를 반환  
+let isValid : boolean = usernameControl.valid;
+// 폼 컨트롤의 errors 프로퍼티를 참조해서 에러 객체를 확인
+let errors : { [key : string] : any } = usernameControl.errors;
+```    
+
+**커스텀 유효성 검사기**  
+;표준 유효성 검사기는 문자열이나 숫자 같은 기본 자료형을 검사 할 때 간단하게 사용  
+=> 좀더 복잡한 데이터 형식을 검사할 때는 커스텀 유효성 검사기  
+(FormControl, FormGroup, FormArray)와 같은 폼 컨트롤을 인자로 받기  
+
+> 커스텀 유효성 검사기 (주민번호(SSN))
+
+```  
+// 필드를 하나씩 검사하기 위해 인자로 FormControl 타입을 받는다.
+function ssnValidator (control : FormControl) : { [key : string] : any } {
+  // 사용자가 값을 입력하지 않아도 유효성 검사기는 동작하므로 null 값을 검사하지 않도록
+  // 폼 컨트롤 객체의 값을 보정
+  const value : string = control.value || '';
+  // 정규표현식을 사용해서 주민번호를 검사
+  const valid : value.match(/^\d{9}$/);
+  // 주민번호의 형식에 맞지 않으면 에러 객체를 반환. 검사에 성공하면 null을 반환  
+  // 즉, 에러가 발생하지 않았다. 검사 결과에 대한 세부 정보는 제공하지 않음
+  return valid ? null : { ssn : true };
+}
+
+let ssnControl = new FormControl('', ssnValidator);
+```  
+
+**그룹 유효성 검사기**  
+; 연관 필드로 묶어 한 번에 검사할 때는 FormGroup를 인자로 받는 유효성 검사기  
+
+> 비밀번호, 확인 필드 유효성 검사기  
+
+```
+function equalValidator ({ value } : FormGroup) : { [key : string] : any } {
+  // 폼 데이터의 모든 프로퍼티를 개별 변수로 할당
+  const [first, ... rest] = Object.keys(value || {});
+  // 프로퍼티를 순회하며 값이 같은지 검사
+  const valid = rest.every(v => value[v] == value[first]);
+  // null : 성공 , 에러 객체 : 실패 반환
+  return valid ? null : {equal : true};
+}
+```  
+=>  ValidatorFn 인터페이스에 맞게, 첫 번째 인자는 AbstractControl의 하위 클래스  
+(FormGroup)이고 반환 타입은 객체 리터럴  
+=> 배열의 비구조화 할당 (ES6 표준 문법)  
+
+**회원 가입 폼에서 유효성 검사하기**  
+
+> 폼 모델 수정하기  
+
+```
+this.formModel = new FormGroup({
+  // 필드에 값만 있으면 유효성 통과
+  'username': new FormControl('', Validators.required),
+  // ssnValidator를 이용하여 체크
+  'ssn': new FormControl('', ssnValidator),  
+  'passwordsGroup': new FormGroup({
+    // 5글자보다 짧으면 에러
+    'password': new FormControl('', Validators.minLength(5)),    
+    'pconfirm': new FormControl()
+    // equalValidator 적용.
+  }, equalValidator)
+});
+
+...
+
+onSubmit() {
+  if (this.formModel.valid) {
+    // 컴포넌트의 formModel 프로퍼티를 사용해서 폼 데이터에 접근
+    console.log(this.formModel.value);
+    // console.log(this.formModel.value.username);
+  }
+}
+```  
+
+> 템플릿 수정  
+
+```
+<form [formGroup]="formModel" (ngSubmit)="onSubmit()" novalidate>  
+  <div>
+    <p>
+      Username : <input type="text" formControlName="username">
+      <span [hidden]="!formModel.hasError('required', 'username')">Username is required</span>
+    </p>
+  </div>
+  <div>
+    <p>
+      SSN : <input type="text" formControlName="ssn">
+      <span [hidden]="!formModel.hasError('ssn', 'ssn')">SSN is required</span>
+    </p>
+  </div>  
+  <div formGroupName="passwordsGroup">    
+    <div>
+      <p>
+        Password : <input type="password" formControlName="password">
+        <span [hidden]="!formModel.hasError('minlength', ['passwordsGroup', 'password'])">Password is too short</span>
+      </p>
+    </div>
+    <div>
+      <p>
+        Confirm password : <input type="password" formControlName="pconfirm">
+        <span [hidden]="!formModel.hasError('equal', 'passwordsGroup')">Passwords must be the same</span>
+      </p>
+    </div>
+  </div>
+  <button type="submit">Submit</button>
+</form>
+```  
+
+=> username 필드의 경우 FormGroup의 프로퍼티로 지정되어 있기 때문에 검사하려는  
+폼 컨트롤의 이름인 username을 그대로 사용  
+=> 비밀번호 필드는 객체가 중첩되어 있기 때문에 배열을 사용해서 폼 모델의  
+passwordsGroup 객체 안에 있는 password를 참조해야 한다.  
+(pconfirm 필드는 passwordsGroup에 동작하는 유효성 검사기의 결과를 사용하기 때문에  
+passwordsGroup을 그대로 적어준다.)  
+
+**FormBuilder에서 유효성 검사기 설정**   
+
+```
+@Component(...)
+class AppComponent {
+  formModel : FormGroup;
+
+  // FormBuilder는 APP 모듈의 provider 설정에서 의존성 목록으로 추가하기 때문에
+  // new 키워드 없이 컴포넌트 생성자로 주입할 수 있음
+  constuctor(fb : FormBuilder) {
+    this.formModel = fb.group({
+      // 유효성 검사기는 FormControl을 선언할 때 두 번째 인자로 전달
+      'username' : ['', Validators.required],
+      'ssn' : ['', ssnValidator],
+      'passwordsGroup' : fb.group({
+        'password' : ['', Validators.minLength(5)],
+        'pconfirm' : ['']
+        // group()함수의 두번째 인자로 옵션 객체 전달(유효성 검사기를 지정)
+      }, {validator : equalValidator})
+    });
+  }
+}
+```  
+
+**비동기 유효성 검사기**  
+; 유효성 검사가 HTTP 요청을 통해 서버를 거쳐야 하는 경우에 이 방식을 사용할 수 있음  
+=> 유일하게 다른 점은 비동기 유효성 검사기는 Observable이나 Promise 객체를 반환  
+
+> 비동기 유효성 검사기  
+
+```
+// 유효성 검사기가 반환하는 타입은 옵저버블
+function asyncSsnValidator (control : FormControl) : Observable<any> {
+  const value : string = control.value || '';
+  const valid = value.match(/^\d{9}$/);
+  // 코드를 간단하게 하기 위해 RxJS에서 제공하는 delay()함수를 이용  
+  // 서버에 요청을 보내고 받는 것 처럼 1초 후에 결과를 반환
+  return Observable.of(valid ? null : { ssn : true}).delay(1000);
+}
+
+...
+constructor() {
+  this.form = new FormGroup({
+    // 세 번째 인자로 전달
+    'my-ssn': new FormControl('', null, asyncSsnValidator)
+  });
+}
+```  
+
+**필드의 상태와 유효성 검사 결과 확인하기**  
+; valid, invalid, errors 프로퍼티를 확인하면 됨  
+
+- touched, untouched : 사용자가 이 필드에 접근했는지 확인할 수 있음  
+필드를 선택하면 touched 값은 true가 되고 필드를 선택하기 전에는 untouched 값이 true  
+
+```
+<!-- 에러가 발생한 필드를 강조하기 위해 CSS 클래스를 정의 -->
+<style>.hasError {border : 1px solid red;} </style>
+<!--
+  1. username 필드에 required 유효성 검사기를 추가
+  2. 템플릿에서 폼 API를 사용하기 위해 템플릿 변수 c에 NgModel 디렉티브 할당
+  3. 유효성 검사 결과에 따라 hasError 클래스를 <input>엘리먼트에 적용  
+     오른쪽 표현식이 true일 떄 hasError 클래스가 적용
+-->
+<input type="text" required  
+  name="username" ngModel #c="ngModel"
+  [class.hasError]="c.invalid && c.touched">
+```  
+
+- pristine : 필드의 값이 변경되지 않으면 pristine 값이 true  
+- dirty : 원래 값과 다르게 변경되면 dirty 값이 true  
+- pending : 비동기 유효성 검사기를 이용할 때 유효성 검사 결과를 아직 받지 못할 때  
+true  
+
+**템플릿 기반 폼에서 유효성 검사하기**  
+; 컴포넌트 코드는 사용할 수 없고 디렉티브만 사용할 수 있기 때문에, 유효성 검사기를  
+디렉티브로 랩핑해서 사용해야 함.
+
+> 06_custom-validator-directive.ts  
+
+```
+import {Component, NgModule, Directive} from "@angular/core";
+import {BrowserModule} from "@angular/platform-browser";
+import {platformBrowserDynamic} from "@angular/platform-browser-dynamic";
+import {FormsModule, FormControl, NG_VALIDATORS} from "@angular/forms";
+
+/**
+ * FormControl에 입력된 SSN이 유효하면 true를 반환하고, 유효하지 않으면 false를 반환한다.
+ */
+function ssnValidator(control: FormControl): { [key: string]: any } {
+  const value: string = control.value || '';
+  const valid = value.match(/^\d{9}$/);
+  return valid ? null : {ssn: true};
+}
+
+// @angular/core 모듈의 @Directive 어노테이션을 사용해서 디렉티브를 정의
+@Directive({
+  // 디렉티브의 셀렉터는 HTML 어트리뷰트로 지정
+  selector: '[ssn]',
+  providers: [{
+    // ssnValidator() 함수를 NG_VALIDATORS 프로바이더 형식으로 등록
+    provide: NG_VALIDATORS,
+    useValue: ssnValidator,
+    multi: true
+  }]
+})
+class SsnValidatorDirective {
+}
+
+@Component({
+  selector: 'app',
+  template: `
+    <form #f="ngForm">
+      <p>
+        SSN : <input type="text" name="my-ssn" ngModel ssn>
+        <span [hidden]="!f.form.hasError('ssn', 'my-ssn')">SSN is invalid</span>
+      </p>
+    </form>
+  `
+})
+class AppComponent {
+}
+
+@NgModule({
+  imports: [BrowserModule, FormsModule],
+  declarations: [AppComponent, SsnValidatorDirective],
+  bootstrap: [AppComponent]
+})
+class AppModule {
+}
+
+platformBrowserDynamic().bootstrapModule(AppModule);
+```  
+
+**회원 가입 폼에 유효성 검사 적용하기**  
+
+> 10_template-driven-with-validation.ts  
+
+```
+import {Component, Directive, NgModule} from "@angular/core";
+import {BrowserModule} from "@angular/platform-browser";
+import {platformBrowserDynamic} from "@angular/platform-browser-dynamic";
+import {FormsModule, FormControl, FormGroup, Validators, NG_VALIDATORS} from "@angular/forms";
+
+/**
+ * FormControl에 입력된 SSN이 유효하면 true를 반환하고, 유효하지 않으면 false를 반환한다.
+ */
+function ssnValidator(control: FormControl): { [key: string]: any } {
+  const value: string = control.value || '';
+  const valid = value.match(/^\d{9}$/);
+  return valid ? null : {ssn: true};
+}
+
+/**
+ * 템플릿에서 유효성 검사를 적용하기 위해
+ * {@link ssnValidator} 함수를 디렉티브로 랩핑한다.
+ */
+@Directive({
+  selector: '[ssn]',
+  providers: [{provide: NG_VALIDATORS, useValue: ssnValidator, multi: true}]
+})
+class SsnValidatorDirective {
+}
+
+/**
+ * 모든 FormControl에 입력된 값이 같으면 true를 반환하고,
+ * 다른 값이 있으면 false를 반환한다.
+ */
+function equalValidator({value}: FormGroup): { [key: string]: any } {
+  const [first, ...rest] = Object.keys(value || {});
+  const valid = rest.every(v => value[v] === value[first]);
+  return valid ? null : {equal: true};
+}
+
+/**
+ * 템플릿에서 유효성 검사를 적용하기 위해
+ * {@link equalValidator} 함수를 디렉티브로 랩핑한다.
+ */
+@Directive({
+  selector: '[equal]',
+  providers: [{provide: NG_VALIDATORS, useValue: equalValidator, multi: true}]
+})
+class EqualValidatorDirective {
+}
+
+@Component({
+  selector: 'app',
+  directives: [
+    SsnValidatorDirective,
+    EqualValidatorDirective
+  ],
+  template: `
+    <!-- onSubmit() 함수에 폼 데이터와 유효성 검사 결과를 인자로 전달-->
+    <form #f="ngForm" (ngSubmit)="onSubmit(f.value, f.valid)" novalidate>
+      <div>
+        <p>
+          Username :
+          <!-- required 유효성 검사기를 어트리뷰트로 추가 -->
+          <input type="text" name="username" ngModel required>
+          <!-- 유효성 검사 결과에 따라 에러 메시지를 표시하거나 감춤 -->
+          <span [hidden]="!f.form.hasError('required', 'username')">Username is required</span>
+        </p>
+      </div>
+      <div>
+        <p>
+          SSN :
+          <input type="text" name="ssn" ngModel ssn>
+          <span [hidden]="!f.form.hasError('ssn', 'ssn')">SSN is invalid</span>
+        </p>
+      </div>
+      <!-- equal은 이전에 구현했던 equalValidator를 랩핑한 디렉티브-->
+      <div ngModelGroup="passwordsGroup" equal>
+        <div>
+          <p>
+            Password :
+            <input type="password" name="password" ngModel minlength="5">
+            <span [hidden]="!f.form.hasError('minlength', ['passwordsGroup', 'password'])">Password is too short</span>
+          </p>
+        </div>
+        <div>
+          <p>
+            Confirm password :
+            <input type="password" name="pconfirm" ngModel>
+            <span [hidden]="!f.form.hasError('equal', 'passwordsGroup')">
+              \Passwords must be the same
+            </span>
+          </p>
+        </div>
+      </div>
+      <button type="submit">Submit</button>
+    </form>
+  `
+})
+class AppComponent {
+  // 함수의 인자에 isFormValid 변수를 추가
+  onSubmit(formValue: any, isFormValid: boolean) {
+    // 폼 유효성 검사를 통과하면 폼 데이터를 출력
+    if (isFormValid) {
+      console.log(formValue);
+    }
+  }
+}
+
+...
+```  
+
+---  
+
+<div id="7.5"></div>  
+
+## 7.5 실습 : 검색 폼에 유효성 검사 추가하기  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

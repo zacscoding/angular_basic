@@ -23,7 +23,14 @@ System.config({
 
 		//'app' : { main : '01_template-driven', defaultExtension : 'ts' }
     // 'app' : { main : '02_growable-items-form', defaultExtension : 'ts' }
-    // 'app' : { main : '03_reactive', defaultExtension : 'ts' }
-    'app' : { main : '04_form-builder', defaultExtension : 'ts' }
+		// 'app' : { main : '03_reactive', defaultExtension : 'ts' }
+    // 'app' : { main : '04_form-builder', defaultExtension : 'ts' }
+    // 'app' : { main : '05_custom-validator', defaultExtension : 'ts' }
+    // 'app' : { main : '07_custom-validator-error-message', defaultExtension
+    // : 'ts' }
+    // 'app' : { main : '08_async-validator', defaultExtension : 'ts' }
+    // 'app' : { main : '06_custom-validator-directive', defaultExtension :
+		// 'ts' }
+		'app' : { main : '10_template-driven-with-validation', defaultExtension : 'ts' }
 	}
 });

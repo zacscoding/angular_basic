@@ -10,7 +10,7 @@ import {ReactiveFormsModule, FormControl, FormGroup} from "@angular/forms";
     form 엘리먼트에 formGroup 디렉티브를 사용해서 폼 그룹 지정
     반응형 폼 방식에서는 ngSubmit 이벤트 핸들러에 인자를 전달하지 않는다.
     -->
-    <form [formGroup]="formModel" (ngSubmit)="onSubmit()">
+    <form [formGroup]="formModel" (ngSubmit)="onSubmit()" novalidate>
       <!-- 입력 필드에 formControlName 디렉티브를 사용해 FormControl 인스턴스와 연결-->
       <div>Username : <input type="text" formControlName="username"></div>
       <div>SSN : <input type="text" formControlName="ssn"></div>
