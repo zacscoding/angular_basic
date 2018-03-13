@@ -19,6 +19,7 @@
 - <a href="#7.3">7.3 반응형 폼</a>
 - <a href="#7.4">7.4 폼 유효성 검사</a>
 - <a href="#7.5">7.5 실습 : 검색 폼에 유효성 검사 추가하기  </a>
+- <a href="#7.6"></a>
 
 ---  
 
@@ -944,6 +945,187 @@ class AppComponent {
 <div id="7.5"></div>  
 
 ## 7.5 실습 : 검색 폼에 유효성 검사 추가하기  
+; SearchComponent에 유효성 검사를 추가 & 검색 폼에 있는 데이터를 수집하여  
+콘솔로 출력(8장에서는 서버로)  
+
+1. ProductService 클래스에 상품 분류를 반환하는 함수를 추가
+2. FormBuilder를 사용해서 검색 폼을 구성
+3. 폼에 유효성 검사를 적용
+4. 3에서 구성한 폼 모델을 템플릿에 바인딩
+5. 검색 폼에서 발생하는 submit 이벤트를 처리하는 onSearch() 함수 구현  
+
+### 7.5.1 SearchComponent에 카테고리 목록 추가하기  
+
+> app/services/product.service.ts에 getAllCategories() 추가  
+
+```
+getAllCategories(): string[] {
+  return ['Books', 'Electronics', 'Hardware'];
+}
+```  
+
+> app/components/search/search.component.ts  
+
+```
+import {ProductService} from "../../services/product.service";
+```  
+
+> SearchComponent의 프로바이더 목록에 ProductService 추가  
+클래스 프로퍼티로 categories : string[] 선언  
+생성자에 ProductService 추가 후 카테고리 가져오기
+
+```
+@Component({
+  selector: 'auction-search',
+  providers: [ProductService],
+  ...
+}
+export default class SearchComponent {
+  categories: string[];
+
+  // private 키워드를 통해 클래스에 같은 이름의 프로퍼티를
+  // 자동으로 만들고 인자로 받을 객체를 이 프로퍼티의 값으로 할당
+  constructor(private productService: ProductService) {
+    this.categories = productService.getAllCategories();
+  }
+
+  ...
+}  
+```   
+
+### 7.5.2 폼 모델 만들기  
+
+> 1.app/components/search/search.component.ts에 반응형 폼과 관련된 모듈 로드  
+2.FormGroup 타입으로 폼 모델을 선언  
+3.생성자에 FormBuilder를 사용해 폼 모델을 구성  
+4.positiveNumberValidator 유효성 검사기 정의
+
+
+```
+import {FormControl, FormGroup, FormBuilder, Validators} from "@angular/forms";
+...
+export default class SearchComponent {
+  formModel: FormGroup;
+  categories: string[];
+
+  constructor(private productService: ProductService) {
+    this.categories = productService.getAllCategories();
+
+    const fb = new FormBuilder();
+    this.formModel = fb.group({
+      'title': [null, Validators.minLength(3)],
+      'price': [null, positiveNumberValidator],
+      'category': [-1]
+    });
+  }
+}
+
+function positiveNumberValidator(control: FormControl): any {
+  if (!control.value) return null;
+  const price = parseInt(control.value);
+  return price === null || typeof price === 'number' && price > 0 ? null : {positivenumber: true};
+}
+```   
+
+### 7.5.3 템플릿 수정하기  
+
+> components/search/search.component.html  
+1.NgFormModel 디렉티브를 사용해서 form 엘리먼트와 폼 모델 연결
+2.title,price 필드에 유효성 검사 규칙을 정의 & 결과에 따른 에러 메시지 추가  
+(form-group, form-control, hass-error, help-block 등 Bootstrap 클래스)
+3.category 필드에 select 엘리먼트를 사용    
+
+
+```
+<!--
+	- ngSubmit 이벤트를 처리하도록 이벤트 핸들러 등록
+	- 브라우저에서 기본 지원하는 유효성 검사를 막기 위해 novalidate 어트리뷰트 추가
+-->
+<form [formGroup]="formModel"
+      (ngSubmit)="onSearch()"
+      novalidate>
+  <div class="form-group"
+       [class.has-error]="formModel.hasError('minlength', 'title')">
+    <label for="title">Product title:</label>
+    <input id="title"
+           placeholder="Title"
+           class="form-control"
+           type="text"
+           formControlName="title"
+           minlength="3">
+    <span class="help-block" [class.hidden]="!formModel.hasError('minlength', 'title')">
+			Title at least 3 chracters.
+		</span>
+  </div>
+  <div class="form-group"
+       [class.has-error]="formModel.hasError('positivenumber', 'price')">
+    <label for="price">Product price:</label>
+    <input id="price"
+           placeholder="Price"
+           class="form-control"
+           type="number"
+           step="any"
+           min="0"
+           formControlName="price">
+    <span class="help-block" [class.hidden]="!formModel.hasError('positivenumber', 'price')">
+      Price is not a positive number
+    </span>
+  </div>
+  <div class="form-group">
+    <label for="category">Product category:</label>
+    <select id="category"
+            class="form-control"
+            formControlName="category">
+      <option value="-1">All categories</option>
+      <option *ngFor="let c of categories" [value]="c">{{c}}</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <button type="submit" class="btn btn-primary btn-block">Search</button>
+  </div>
+</form>
+```  
+
+### 7.5.4 onSearch() 함수 구현  
+
+> components/search/search.component.ts
+
+```
+onSearch() {
+  if (this.formModel.valid) {
+    console.log(this.formModel.value);
+  }
+}
+```  
+
+---
+
+<div id="7.6"></div>
+
+## 7.6 정리  
+
+- 폼을 구성할 때는 템플릿 기반으로 만드는 방식과 반응형으로 만드는 방식이 있음  
+템플릿기반 폼 : 정의가 간편  // 반응형 폼 : 좀더 유연하며 테스트하기 적합하고 더  
+많은 기능 추가
+- 반응형 폼의 장점은 NativeScript와 같이 브라우저가 없는 환경에서도 적용  
+템플릿대신 컴포넌트 코드에서 폼을 정의하면, 이후에 렌더러를 바꾸는 상황에서도 코드를  
+재사용 가능
+- Angular에는 표준 유효성 검사기도 다양하게 제공하고 있지만, 필요한 경우에는 커스텀  
+유효성 검사기를 만들어서 사용  
+(Client에서 유효성을 검사했다고 Server에서도 생략해야 하는 것은 아니고, 사용자에게  
+좀더 나은 피드백 + 서버로 불필요한 요청을 보내지 않는 용도로 사용!!)  
+
+
+
+
+
+
+
+
+
+
+
 
 
 
